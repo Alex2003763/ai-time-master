@@ -38,7 +38,7 @@ if (workbox) {
   workbox.routing.registerRoute(
     ({ request, url }) =>
       (request.destination === 'script' || request.destination === 'style') &&
-      (url.origin === self.location.origin || url.origin === 'https://aistudiocdn.com'),
+      (url.origin === self.location.origin || url.origin === 'https://aistudiocdn.com' || url.origin === 'https://cdn.tailwindcss.com'),
     new workbox.strategies.StaleWhileRevalidate({
       cacheName: CACHE_STATIC,
       plugins: [
