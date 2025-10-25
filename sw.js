@@ -18,7 +18,7 @@ self.addEventListener('install', event => {
 
 // Serve cached content when offline
 self.addEventListener('fetch', event => {
-  // We only want to cache GET requests and ignore non-web schemes.
+  // We only want to cache GET requests and ignore non-web schemes like chrome-extension.
   if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
     return;
   }
@@ -33,7 +33,7 @@ self.addEventListener('fetch', event => {
 
         return fetch(event.request).then(
           response => {
-            // Check if we received a valid response
+            // Check if we received a valid response. We only cache basic, same-origin responses.
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
