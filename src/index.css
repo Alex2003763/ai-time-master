@@ -1,0 +1,320 @@
+@import url('https://rsms.me/inter/inter.css');
+html { font-family: 'Inter', sans-serif; }
+@supports (font-variation-settings: normal) {
+  html { font-family: 'Inter var', sans-serif; }
+}
+
+/* Base styles, not theme-dependent */
+body {
+  background-color: var(--color-bg);
+  transition: background-color 0.3s ease;
+  background-attachment: fixed;
+}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgba(128, 128, 128, 0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: var(--color-brand-secondary); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-brand-secondary-hover); }
+
+/* Custom Select Styling */
+.custom-select {
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background-color: var(--color-card-bg) !important;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-card-border) !important;
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+    color: var(--color-text-primary);
+    padding-right: 2.5rem !important;
+}
+select option { background-color: var(--color-bg); color: var(--color-text-primary); }
+
+/* --- THEME DEFINITIONS --- */
+
+/* 1. Original Light Theme */
+body[data-theme='light'] {
+  --color-bg: #f0f2f5;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-card-bg: rgba(255, 255, 255, 0.6);
+  --color-card-border: rgba(0, 0, 0, 0.08);
+  --color-brand-primary: #0ea5e9;
+  --color-brand-primary-hover: #0284c7;
+  --color-brand-secondary: #8b5cf6;
+  --color-brand-secondary-hover: #7c3aed;
+  --color-brand-tertiary: #d946ef;
+  --color-brand-tertiary-hover: #c026d3;
+  --color-nav-active-bg: rgba(0, 0, 0, 0.07);
+  --color-nav-hover-bg: rgba(0, 0, 0, 0.04);
+  --color-input-bg: rgba(0, 0, 0, 0.05);
+  --color-input-border: rgba(0, 0, 0, 0.1);
+  --color-input-focus: #0ea5e9;
+  --color-progress-track: rgba(0, 0, 0, 0.1);
+  --color-btn-primary-bg: rgba(14, 165, 233, 0.8);
+  --color-btn-primary-text: #ffffff;
+  --color-btn-primary-hover-bg: #0ea5e9;
+  --color-btn-secondary-bg: rgba(139, 92, 246, 0.8);
+  --color-btn-secondary-text: #ffffff;
+  --color-btn-secondary-hover-bg: #8b5cf6;
+  --color-btn-tertiary-bg: rgba(217, 70, 239, 0.8);
+  --color-btn-tertiary-text: #ffffff;
+  --color-btn-tertiary-hover-bg: #d946ef;
+  --color-btn-default-bg: rgba(0, 0, 0, 0.05);
+  --color-btn-default-text: var(--color-text-secondary);
+  --color-btn-default-hover-bg: rgba(0, 0, 0, 0.1);
+  --color-btn-danger-bg: rgba(239, 68, 68, 0.8);
+  --color-btn-danger-text: #ffffff;
+  --color-btn-danger-hover-bg: #ef4444;
+  --color-btn-border: transparent;
+}
+body[data-theme='light'] {
+   background-image:
+    radial-gradient(at 20% 20%, hsla(212, 80%, 85%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 80% 20%, hsla(280, 80%, 90%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 20% 80%, hsla(320, 80%, 90%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 80% 80%, hsla(180, 80%, 85%, 0.3) 0px, transparent 50%);
+}
+body[data-theme='light'] .custom-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}
+body[data-theme='light'] select option { background-color: var(--color-bg); }
+
+/* 2. Original Dark Theme */
+body[data-theme='dark'] {
+  --color-bg: #0c0a1a;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #9ca3af;
+  --color-card-bg: rgba(255, 255, 255, 0.05);
+  --color-card-border: rgba(255, 255, 255, 0.1);
+  --color-brand-primary: #22d3ee;
+  --color-brand-primary-hover: #06b6d4;
+  --color-brand-secondary: #a855f7;
+  --color-brand-secondary-hover: #9333ea;
+  --color-brand-tertiary: #e879f9;
+  --color-brand-tertiary-hover: #d946ef;
+  --color-nav-active-bg: rgba(255, 255, 255, 0.1);
+  --color-nav-hover-bg: rgba(255, 255, 255, 0.05);
+  --color-input-bg: rgba(255, 255, 255, 0.1);
+  --color-input-border: rgba(255, 255, 255, 0.2);
+  --color-input-focus: #22d3ee;
+  --color-progress-track: rgba(255, 255, 255, 0.1);
+  --color-btn-primary-bg: rgba(34, 211, 238, 0.15);
+  --color-btn-primary-text: var(--color-brand-primary);
+  --color-btn-primary-hover-bg: rgba(34, 211, 238, 0.25);
+  --color-btn-secondary-bg: rgba(168, 85, 247, 0.15);
+  --color-btn-secondary-text: var(--color-brand-secondary);
+  --color-btn-secondary-hover-bg: rgba(168, 85, 247, 0.25);
+  --color-btn-tertiary-bg: rgba(232, 121, 249, 0.15);
+  --color-btn-tertiary-text: var(--color-brand-tertiary);
+  --color-btn-tertiary-hover-bg: rgba(232, 121, 249, 0.25);
+  --color-btn-default-bg: rgba(255, 255, 255, 0.08);
+  --color-btn-default-text: var(--color-text-secondary);
+  --color-btn-default-hover-bg: rgba(255, 255, 255, 0.12);
+  --color-btn-danger-bg: rgba(248, 113, 113, 0.15);
+  --color-btn-danger-text: #f87171;
+  --color-btn-danger-hover-bg: rgba(248, 113, 113, 0.25);
+  --color-btn-border: rgba(255, 255, 255, 0.1);
+}
+ body[data-theme='dark'] {
+   background-image:
+    radial-gradient(at 20% 20%, hsla(212, 80%, 45%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 80% 20%, hsla(280, 80%, 50%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 20% 80%, hsla(320, 80%, 55%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 80% 80%, hsla(180, 80%, 40%, 0.2) 0px, transparent 50%);
+}
+
+/* 3. Twilight Glow Theme (Dark) */
+body[data-theme='twilight-glow'] {
+  --color-bg: #110f21;
+  --color-text-primary: #f0e7ff;
+  --color-text-secondary: #a89dd4;
+  --color-card-bg: rgba(255, 255, 255, 0.06);
+  --color-card-border: rgba(255, 255, 255, 0.12);
+  --color-brand-primary: #f472b6;
+  --color-brand-primary-hover: #ec4899;
+  --color-brand-secondary: #c084fc;
+  --color-brand-secondary-hover: #a855f7;
+  --color-brand-tertiary: #60a5fa;
+  --color-brand-tertiary-hover: #3b82f6;
+  --color-nav-active-bg: rgba(244, 114, 182, 0.15);
+  --color-nav-hover-bg: rgba(244, 114, 182, 0.1);
+  --color-input-bg: rgba(255, 255, 255, 0.1);
+  --color-input-border: rgba(255, 255, 255, 0.2);
+  --color-input-focus: #f472b6;
+  --color-progress-track: rgba(255, 255, 255, 0.1);
+  --color-btn-primary-bg: rgba(244, 114, 182, 0.15);
+  --color-btn-primary-text: var(--color-brand-primary);
+  --color-btn-primary-hover-bg: rgba(244, 114, 182, 0.25);
+  --color-btn-secondary-bg: rgba(192, 132, 252, 0.15);
+  --color-btn-secondary-text: var(--color-brand-secondary);
+  --color-btn-secondary-hover-bg: rgba(192, 132, 252, 0.25);
+  --color-btn-tertiary-bg: rgba(96, 165, 250, 0.15);
+  --color-btn-tertiary-text: var(--color-brand-tertiary);
+  --color-btn-tertiary-hover-bg: rgba(96, 165, 250, 0.25);
+  --color-btn-default-bg: rgba(255, 255, 255, 0.08);
+  --color-btn-default-text: var(--color-text-secondary);
+  --color-btn-default-hover-bg: rgba(255, 255, 255, 0.12);
+  --color-btn-danger-bg: rgba(248, 113, 113, 0.15);
+  --color-btn-danger-text: #f87171;
+  --color-btn-danger-hover-bg: rgba(248, 113, 113, 0.25);
+  --color-btn-border: rgba(255, 255, 255, 0.1);
+}
+body[data-theme='twilight-glow'] {
+   background-image:
+    radial-gradient(at 10% 20%, hsla(330, 80%, 60%, 0.25) 0px, transparent 50%),
+    radial-gradient(at 80% 15%, hsla(270, 70%, 55%, 0.25) 0px, transparent 50%),
+    radial-gradient(at 20% 90%, hsla(220, 80%, 60%, 0.25) 0px, transparent 50%),
+    radial-gradient(at 90% 85%, hsla(300, 75%, 60%, 0.25) 0px, transparent 50%);
+}
+
+/* 4. Minty Fresh Theme (Light) */
+body[data-theme='minty-fresh'] {
+  --color-bg: #f0fdfa;
+  --color-text-primary: #0f766e;
+  --color-text-secondary: #0d9488;
+  --color-card-bg: rgba(255, 255, 255, 0.7);
+  --color-card-border: rgba(13, 148, 136, 0.15);
+  --color-brand-primary: #14b8a6;
+  --color-brand-primary-hover: #0d9488;
+  --color-brand-secondary: #2dd4bf;
+  --color-brand-secondary-hover: #14b8a6;
+  --color-brand-tertiary: #34d399;
+  --color-brand-tertiary-hover: #10b981;
+  --color-nav-active-bg: rgba(20, 184, 166, 0.1);
+  --color-nav-hover-bg: rgba(20, 184, 166, 0.05);
+  --color-input-bg: rgba(20, 184, 166, 0.08);
+  --color-input-border: rgba(20, 184, 166, 0.15);
+  --color-input-focus: #14b8a6;
+  --color-progress-track: rgba(13, 148, 136, 0.1);
+  --color-btn-primary-bg: #14b8a6;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-primary-hover-bg: #0d9488;
+  --color-btn-secondary-bg: #2dd4bf;
+  --color-btn-secondary-text: #ffffff;
+  --color-btn-secondary-hover-bg: #14b8a6;
+  --color-btn-tertiary-bg: #34d399;
+  --color-btn-tertiary-text: #ffffff;
+  --color-btn-tertiary-hover-bg: #10b981;
+  --color-btn-default-bg: rgba(13, 148, 136, 0.07);
+  --color-btn-default-text: var(--color-text-secondary);
+  --color-btn-default-hover-bg: rgba(13, 148, 136, 0.12);
+  --color-btn-danger-bg: #e57373;
+  --color-btn-danger-text: #ffffff;
+  --color-btn-danger-hover-bg: #ef5350;
+  --color-btn-border: transparent;
+}
+body[data-theme='minty-fresh'] {
+   background-image:
+    radial-gradient(at 15% 15%, hsla(160, 60%, 80%, 0.4) 0px, transparent 50%),
+    radial-gradient(at 80% 20%, hsla(170, 70%, 85%, 0.4) 0px, transparent 50%),
+    radial-gradient(at 20% 85%, hsla(140, 65%, 85%, 0.4) 0px, transparent 50%),
+    radial-gradient(at 85% 90%, hsla(165, 60%, 80%, 0.4) 0px, transparent 50%);
+}
+ body[data-theme='minty-fresh'] .custom-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%230d9488' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}
+body[data-theme='minty-fresh'] select option { background-color: var(--color-bg); }
+
+/* 5. Crimson Night Theme (Dark) */
+body[data-theme='crimson-night'] {
+  --color-bg: #1c0a0a;
+  --color-text-primary: #fee2e2;
+  --color-text-secondary: #fca5a5;
+  --color-card-bg: rgba(255, 160, 160, 0.05);
+  --color-card-border: rgba(255, 160, 160, 0.1);
+  --color-brand-primary: #f87171;
+  --color-brand-primary-hover: #ef4444;
+  --color-brand-secondary: #fb923c;
+  --color-brand-secondary-hover: #f97316;
+  --color-brand-tertiary: #facc15;
+  --color-brand-tertiary-hover: #eab308;
+  --color-nav-active-bg: rgba(248, 113, 113, 0.15);
+  --color-nav-hover-bg: rgba(248, 113, 113, 0.1);
+  --color-input-bg: rgba(251, 146, 60, 0.1);
+  --color-input-border: rgba(251, 146, 60, 0.2);
+  --color-input-focus: #f87171;
+  --color-progress-track: rgba(255, 255, 255, 0.1);
+  --color-btn-primary-bg: rgba(248, 113, 113, 0.15);
+  --color-btn-primary-text: var(--color-brand-primary);
+  --color-btn-primary-hover-bg: rgba(248, 113, 113, 0.25);
+  --color-btn-secondary-bg: rgba(251, 146, 60, 0.15);
+  --color-btn-secondary-text: var(--color-brand-secondary);
+  --color-btn-secondary-hover-bg: rgba(251, 146, 60, 0.25);
+  --color-btn-tertiary-bg: rgba(250, 204, 21, 0.15);
+  --color-btn-tertiary-text: var(--color-brand-tertiary);
+  --color-btn-tertiary-hover-bg: rgba(250, 204, 21, 0.25);
+  --color-btn-default-bg: rgba(255, 226, 226, 0.08);
+  --color-btn-default-text: var(--color-text-secondary);
+  --color-btn-default-hover-bg: rgba(255, 226, 226, 0.12);
+  --color-btn-danger-bg: rgba(248, 113, 113, 0.15);
+  --color-btn-danger-text: #f87171;
+  --color-btn-danger-hover-bg: rgba(248, 113, 113, 0.25);
+  --color-btn-border: rgba(255, 160, 160, 0.1);
+}
+body[data-theme='crimson-night'] {
+   background-image:
+    radial-gradient(at 5% 10%, hsla(0, 70%, 50%, 0.25) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, hsla(25, 80%, 50%, 0.25) 0px, transparent 50%),
+    radial-gradient(at 10% 90%, hsla(350, 75%, 55%, 0.25) 0px, transparent 50%),
+    radial-gradient(at 90% 80%, hsla(15, 80%, 50%, 0.25) 0px, transparent 50%);
+}
+
+/* 6. Ocean Breeze Theme (Light) */
+body[data-theme='ocean-breeze'] {
+  --color-bg: #f0f9ff;
+  --color-text-primary: #0369a1;
+  --color-text-secondary: #0ea5e9;
+  --color-card-bg: rgba(255, 255, 255, 0.65);
+  --color-card-border: rgba(56, 189, 248, 0.2);
+  --color-brand-primary: #38bdf8;
+  --color-brand-primary-hover: #0ea5e9;
+  --color-brand-secondary: #22d3ee;
+  --color-brand-secondary-hover: #06b6d4;
+  --color-brand-tertiary: #4ade80;
+  --color-brand-tertiary-hover: #22c55e;
+  --color-nav-active-bg: rgba(56, 189, 248, 0.1);
+  --color-nav-hover-bg: rgba(56, 189, 248, 0.05);
+  --color-input-bg: rgba(56, 189, 248, 0.08);
+  --color-input-border: rgba(56, 189, 248, 0.2);
+  --color-input-focus: #38bdf8;
+  --color-progress-track: rgba(3, 105, 161, 0.1);
+  --color-btn-primary-bg: #38bdf8;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-primary-hover-bg: #0ea5e9;
+  --color-btn-secondary-bg: #22d3ee;
+  --color-btn-secondary-text: #ffffff;
+  --color-btn-secondary-hover-bg: #06b6d4;
+  --color-btn-tertiary-bg: #4ade80;
+  --color-btn-tertiary-text: #ffffff;
+  --color-btn-tertiary-hover-bg: #22c55e;
+  --color-btn-default-bg: rgba(3, 105, 161, 0.07);
+  --color-btn-default-text: var(--color-text-secondary);
+  --color-btn-default-hover-bg: rgba(3, 105, 161, 0.12);
+  --color-btn-danger-bg: #f43f5e;
+  --color-btn-danger-text: #ffffff;
+  --color-btn-danger-hover-bg: #e11d48;
+  --color-btn-border: transparent;
+}
+body[data-theme='ocean-breeze'] {
+   background-image:
+    radial-gradient(at 10% 15%, hsla(200, 80%, 85%, 0.4) 0px, transparent 50%),
+    radial-gradient(at 85% 25%, hsla(185, 75%, 80%, 0.4) 0px, transparent 50%),
+    radial-gradient(at 25% 90%, hsla(195, 80%, 80%, 0.4) 0px, transparent 50%),
+    radial-gradient(at 75% 85%, hsla(175, 70%, 85%, 0.4) 0px, transparent 50%);
+}
+body[data-theme='ocean-breeze'] .custom-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%230369a1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}
+body[data-theme='ocean-breeze'] select option { background-color: var(--color-bg); }
+
+/* Dark Theme Select Arrow and Option Overrides */
+body[data-theme='dark'] .custom-select,
+body[data-theme='twilight-glow'] .custom-select,
+body[data-theme='crimson-night'] .custom-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}
+body[data-theme='dark'] select option,
+body[data-theme='twilight-glow'] select option,
+body[data-theme='crimson-night'] select option {
+  background-color: #1e1b33;
+}
