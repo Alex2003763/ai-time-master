@@ -1,0 +1,5 @@
+{
+  "name": "AI Time Master",
+  "description": "An AI-powered time management PWA to boost productivity. It features AI-based task sorting, schedule suggestions, and progress tracking with a modern, responsive, liquid glass-style UI.",
+  "requestFramePermissions": []
+}
