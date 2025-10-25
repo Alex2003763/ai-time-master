@@ -12,6 +12,7 @@ export const THEMES = [
 interface ThemeContextType {
   theme: string;
   setTheme: (theme: string) => void;
+  toggleTheme: () => void;
   themeType: 'light' | 'dark';
 }
 
@@ -45,11 +46,24 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setThemeState(newTheme);
     }
   };
+  
+  const toggleTheme = () => {
+      const currentThemeInfo = THEMES.find(t => t.id === theme);
+      if (currentThemeInfo?.type === 'light') {
+        // Find the first dark theme and set it
+        const firstDark = THEMES.find(t => t.type === 'dark');
+        if (firstDark) setThemeState(firstDark.id);
+      } else {
+        // Find the first light theme and set it
+        const firstLight = THEMES.find(t => t.type === 'light');
+        if (firstLight) setThemeState(firstLight.id);
+      }
+  };
 
   const themeType = THEMES.find(t => t.id === theme)?.type || 'dark';
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, themeType }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, themeType }}>
       {children}
     </ThemeContext.Provider>
   );

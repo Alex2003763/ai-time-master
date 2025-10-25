@@ -34,9 +34,11 @@ if (workbox) {
   // 2. For CSS, JavaScript, and other static assets, use a StaleWhileRevalidate strategy.
   // This serves content from the cache first for a fast experience, then updates
   // the cache in the background with the latest version from the network.
+  // We only cache assets from our own origin and our trusted CDN.
   workbox.routing.registerRoute(
-    ({ request }) =>
-      request.destination === 'script' || request.destination === 'style',
+    ({ request, url }) =>
+      (request.destination === 'script' || request.destination === 'style') &&
+      (url.origin === self.location.origin || url.origin === 'https://aistudiocdn.com'),
     new workbox.strategies.StaleWhileRevalidate({
       cacheName: CACHE_STATIC,
       plugins: [
