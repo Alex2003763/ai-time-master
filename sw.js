@@ -2,7 +2,6 @@ const CACHE_NAME = 'ai-time-master-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
   '/icon.png'
 ];
 
@@ -19,8 +18,8 @@ self.addEventListener('install', event => {
 
 // Serve cached content when offline
 self.addEventListener('fetch', event => {
-  // We only want to cache GET requests.
-  if (event.request.method !== 'GET') {
+  // We only want to cache GET requests and ignore non-web schemes.
+  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
     return;
   }
   
