@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import GlassCard from './GlassCard';
 import { Task } from '../types';
-import { playSound, unlockAudioContext } from '../utils/soundPlayer';
+import { playSound } from '../utils/soundPlayer';
 import { requestNotificationPermission, sendNotification } from '../utils/notifications';
 
 interface FocusTimerProps {

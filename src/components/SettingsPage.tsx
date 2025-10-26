@@ -31,6 +31,10 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handlePreviewSound = async () => {
+    await playSound(selectedSound);
+  };
+
   return (
     <main className="flex-1">
       <div className="max-w-4xl mx-auto flex flex-col gap-6">
@@ -76,7 +80,7 @@ const SettingsPage: React.FC = () => {
                 </select>
                 <button
                     type="button"
-                    onClick={() => playSound(selectedSound)}
+                    onClick={handlePreviewSound}
                     className="font-semibold py-2 px-2 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg"
                     aria-label="Preview sound"
                 >

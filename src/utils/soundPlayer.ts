@@ -67,19 +67,6 @@ const getAudioContext = (): AudioContext | null => {
   }
 };
 
-/**
- * Unlocks the AudioContext after a user gesture.
- * This is required by modern browsers (especially on mobile) to allow audio playback.
- * It should be called from within a click or tap event handler.
- */
-export const unlockAudioContext = () => {
-  const ctx = getAudioContext();
-  // If the context is in a suspended state, it needs to be resumed.
-  if (ctx && ctx.state === 'suspended') {
-    ctx.resume().catch(err => console.error("Failed to resume AudioContext:", err));
-  }
-};
-
 // --- Sound Playback ---
 
 /**
@@ -131,20 +118,27 @@ const createTone = (
 };
 
 /**
- * Plays the specified sound effect.
+ * Plays the specified sound effect. This is an async function that handles
+ * unlocking the AudioContext on user interaction.
  * @param {SoundName} [soundName=getSelectedSound()] - The name of the sound to play.
  */
-export const playSound = (soundName: SoundName = getSelectedSound()) => {
+export const playSound = async (soundName: SoundName = getSelectedSound()) => {
   const ctx = getAudioContext();
   if (!ctx) {
     console.error("AudioContext not available, cannot play sound.");
     return;
   }
 
-  // Attempt to resume context if it's suspended.
+  // Await the resume() promise to ensure the context is running before playing audio.
+  // This is crucial for complying with browser autoplay policies.
   if (ctx.state !== 'running') {
-    console.warn('AudioContext is suspended. Attempting to resume...');
-    ctx.resume().catch(err => console.error("Failed to resume AudioContext during playback:", err));
+    try {
+      await ctx.resume();
+    } catch (err) {
+      console.error("Failed to resume AudioContext:", err);
+      // Do not proceed if the context cannot be resumed.
+      return;
+    }
   }
 
   const now = ctx.currentTime;
