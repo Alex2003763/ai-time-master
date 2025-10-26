@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import FocusPage from './components/FocusPage';
@@ -12,6 +12,7 @@ import { Task, NewTaskPayload } from './types';
 import TaskModal from './components/TaskModal';
 import AISchedulerModal from './components/AISchedulerModal';
 import FloatingActionButton from './components/FloatingActionButton';
+import { unlockAudioContext } from './utils/soundPlayer';
 
 function AppContent() {
   const tasksHook = useTasks();
@@ -21,6 +22,24 @@ function AppContent() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const [isAISchedulerOpen, setIsAISchedulerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      unlockAudioContext();
+      // Clean up listeners after first interaction
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+    };
+
+    window.addEventListener('click', handleFirstInteraction);
+    window.addEventListener('touchstart', handleFirstInteraction);
+
+    // Cleanup on component unmount
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+    };
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   const handleOpenAddTaskModal = () => {
     setEditingTask(null);
