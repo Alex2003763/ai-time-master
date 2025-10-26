@@ -4,6 +4,7 @@
 const CACHE_PAGES = "atm-pages-v1";
 const CACHE_STATIC = "atm-static-v1";
 const CACHE_IMAGES = "atm-images-v1";
+const CACHE_AUDIO = "atm-audio-v1";
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
 
@@ -67,6 +68,43 @@ if (workbox) {
       ],
     })
   );
+
+  // 4. For audio files, use a CacheFirst strategy.
+  // This ensures any notification sounds are available offline.
+  workbox.routing.registerRoute(
+    ({ request }) => request.destination === 'audio',
+    new workbox.strategies.CacheFirst({
+      cacheName: CACHE_AUDIO,
+      plugins: [
+        new workbox.expiration.ExpirationPlugin({
+          maxEntries: 20, // Cache up to 20 audio files
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        }),
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+      ],
+    })
+  );
+  
 } else {
   console.log(`Workbox failed to load, offline functionality will be limited.`);
 }
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) {
+        let client = clientList[0];
+        for (let i = 0; i < clientList.length; i++) {
+          if (clientList[i].focused) {
+            client = clientList[i];
+          }
+        }
+        return client.focus();
+      }
+      return clients.openWindow('/');
+    })
+  );
+});
