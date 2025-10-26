@@ -30,7 +30,7 @@ const calculateNextOccurrence = (task: Task): Task => {
     if (!recurring) return task;
 
     const currentStartDate = new Date(startTime);
-    const nextStartDate = new Date(currentStartDate);
+    let nextStartDate = new Date(currentStartDate);
 
     const duration = endTime ? new Date(endTime).getTime() - currentStartDate.getTime() : 0;
 
@@ -38,30 +38,39 @@ const calculateNextOccurrence = (task: Task): Task => {
         case RecurrenceFrequency.DAILY:
             nextStartDate.setDate(currentStartDate.getDate() + recurring.interval);
             break;
-        case RecurrenceFrequency.WEEKLY:
-            nextStartDate.setDate(currentStartDate.getDate() + 7 * recurring.interval);
+        case RecurrenceFrequency.WEEKLY: {
+            if (recurring.daysOfWeek && recurring.daysOfWeek.length > 0) {
+                const sortedDays = recurring.daysOfWeek.sort((a,b) => a-b);
+                const currentDay = currentStartDate.getDay();
+                
+                let nextDayInWeek = sortedDays.find(day => day > currentDay);
+
+                if (nextDayInWeek !== undefined) {
+                    // Next occurrence is in the same week
+                    nextStartDate.setDate(currentStartDate.getDate() + (nextDayInWeek - currentDay));
+                } else {
+                    // Next occurrence is in a future week
+                    const daysToNextWeek = 7 - currentDay + sortedDays[0];
+                    const weeksToAdd = (recurring.interval - 1) * 7;
+                    nextStartDate.setDate(currentStartDate.getDate() + daysToNextWeek + weeksToAdd);
+                }
+            } else {
+                // Fallback for old weekly tasks without daysOfWeek
+                nextStartDate.setDate(currentStartDate.getDate() + 7 * recurring.interval);
+            }
             break;
+        }
         case RecurrenceFrequency.MONTHLY: {
             const originalDay = currentStartDate.getDate();
-            // Add the interval to the month.
-            nextStartDate.setMonth(currentStartDate.getMonth() + recurring.interval);
-            // If the new date's day is not the same, it means we have overflowed.
-            // e.g. from Jan 31st to Feb, JS would make it March 2nd or 3rd.
+            nextStartDate.setMonth(currentStartDate.getMonth() + recurring.interval, originalDay);
+            // Handle month-end issues, e.g., Jan 31 -> Feb 28
             if (nextStartDate.getDate() !== originalDay) {
-                // By setting day to 0, we move to the last day of the previous month.
-                // This correctly handles rolling back from March to the end of Feb.
                 nextStartDate.setDate(0);
             }
             break;
         }
         case RecurrenceFrequency.YEARLY: {
-            const originalMonth = currentStartDate.getMonth();
             nextStartDate.setFullYear(currentStartDate.getFullYear() + recurring.interval);
-            // Check if we jumped a month, e.g. from Feb 29 on a leap year to a non-leap year
-            if (nextStartDate.getMonth() !== originalMonth) {
-                 // Roll back to the last day of the previous month (which is Feb).
-                nextStartDate.setDate(0);
-            }
             break;
         }
     }
@@ -126,6 +135,14 @@ export const useTasks = () => {
         }
 
         // Handle completing a recurring task
+        const completedTask: Task = {
+            ...task,
+            completed: true,
+            completionDate: new Date().toISOString(),
+            recurring: undefined,
+            originalId: task.id, // Keep track of the original series
+        };
+
         const nextOccurrence = calculateNextOccurrence(task);
         const recurrenceEndDate = task.recurring.endDate ? new Date(task.recurring.endDate) : null;
         
@@ -135,22 +152,13 @@ export const useTasks = () => {
         }
         
         // If the next occurrence is after the end date, this is the last one.
-        if (recurrenceEndDate && new Date(nextOccurrence.startTime) > recurrenceEndDate) {
-            return prevTasks.map(t =>
-                t.id === taskId
-                ? { ...t, completed: true, completionDate: new Date().toISOString(), recurring: undefined }
-                : t
-            );
-        } else {
-            // The task being toggled becomes a completed, non-recurring instance.
-            const completedTask: Task = {
-                ...task,
-                completed: true,
-                completionDate: new Date().toISOString(),
-                recurring: undefined,
-            };
+        const isLastOccurrence = recurrenceEndDate && new Date(nextOccurrence.startTime) > recurrenceEndDate;
 
-            // A new task is created for the next occurrence.
+        if (isLastOccurrence) {
+            // Mark the final instance as complete and remove recurrence.
+            return prevTasks.map(t => t.id === taskId ? { ...completedTask, originalId: undefined, recurring: undefined } : t);
+        } else {
+             // Create a new task for the next occurrence.
             const newRecurringTask: Task = {
                 ...task, // Copy properties like title, category, priority, recurring info
                 id: crypto.randomUUID(), // It gets a new ID
@@ -163,7 +171,7 @@ export const useTasks = () => {
             };
             
             // Replace the original task with its completed version, and add the new recurring task.
-            return [...prevTasks.map(t => t.id === taskId ? completedTask : t), newRecurringTask];
+            return [...prevTasks.filter(t => t.id !== taskId), completedTask, newRecurringTask];
         }
     });
   }, []);

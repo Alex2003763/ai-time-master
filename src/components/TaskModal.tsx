@@ -8,6 +8,8 @@ interface TaskModalProps {
   onClose: () => void;
 }
 
+const WEEK_DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
 const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
     
   const toLocalDateString = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
@@ -32,6 +34,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
       frequency: task?.recurring?.frequency || RecurrenceFrequency.DAILY,
       interval: task?.recurring?.interval || 1,
       recurringEndDate: task?.recurring?.endDate || '',
+      daysOfWeek: task?.recurring?.daysOfWeek || [],
     };
   });
   
@@ -40,8 +43,16 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setError(null);
-
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDayOfWeekToggle = (dayIndex: number) => {
+    setFormData(prev => {
+        const newDays = prev.daysOfWeek.includes(dayIndex)
+            ? prev.daysOfWeek.filter(d => d !== dayIndex)
+            : [...prev.daysOfWeek, dayIndex];
+        return { ...prev, daysOfWeek: newDays.sort() };
+    });
   };
 
   const handleRecurringToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,10 +135,22 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
             setError("Repeat interval must be a positive number.");
             return;
         }
+
+        let daysOfWeek: number[] | undefined = undefined;
+        if (formData.frequency === RecurrenceFrequency.WEEKLY) {
+            if (formData.daysOfWeek.length > 0) {
+                daysOfWeek = formData.daysOfWeek;
+            } else {
+                // If no days are selected for a weekly task, default to the start date's day of the week.
+                daysOfWeek = [startDateTime.getDay()];
+            }
+        }
+
         recurring = {
             frequency: formData.frequency as RecurrenceFrequency,
             interval,
             endDate: formData.recurringEndDate || undefined,
+            daysOfWeek,
         };
     }
 
@@ -147,7 +170,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
     } else {
       onSave(payload);
     }
-    onClose();
   };
 
   const inputClasses = "block w-full bg-theme-input-bg border-theme-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-theme-input-focus focus:border-theme-input-focus transition";
@@ -221,24 +243,47 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
                     </label>
                 </div>
                 {isRecurring && (
-                    <div className="grid grid-cols-3 gap-x-4 gap-y-2 mt-4 pl-6 animate-fade-in">
-                        <div className="col-span-3 sm:col-span-1">
-                            <label htmlFor="frequency" className="block text-sm font-medium text-theme-text-secondary">Frequency</label>
-                            <select id="frequency" name="frequency" value={formData.frequency} onChange={handleChange} className={`${inputClasses} custom-select`}>
-                                <option value={RecurrenceFrequency.DAILY}>Daily</option>
-                                <option value={RecurrenceFrequency.WEEKLY}>Weekly</option>
-                                <option value={RecurrenceFrequency.MONTHLY}>Monthly</option>
-                                <option value={RecurrenceFrequency.YEARLY}>Yearly</option>
-                            </select>
+                    <div className="mt-4 pl-6 animate-fade-in space-y-4">
+                        <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                            <div className="col-span-3 sm:col-span-1">
+                                <label htmlFor="frequency" className="block text-sm font-medium text-theme-text-secondary">Frequency</label>
+                                <select id="frequency" name="frequency" value={formData.frequency} onChange={handleChange} className={`${inputClasses} custom-select`}>
+                                    <option value={RecurrenceFrequency.DAILY}>Daily</option>
+                                    <option value={RecurrenceFrequency.WEEKLY}>Weekly</option>
+                                    <option value={RecurrenceFrequency.MONTHLY}>Monthly</option>
+                                    <option value={RecurrenceFrequency.YEARLY}>Yearly</option>
+                                </select>
+                            </div>
+                            <div className="col-span-3 sm:col-span-1">
+                                <label htmlFor="interval" className="block text-sm font-medium text-theme-text-secondary">Every</label>
+                                <input type="number" id="interval" name="interval" value={formData.interval} onChange={handleChange} min="1" className={inputClasses} />
+                            </div>
+                            <div className="col-span-3 sm:col-span-1">
+                                <label htmlFor="recurringEndDate" className="block text-sm font-medium text-theme-text-secondary">Until <span className="text-xs">(optional)</span></label>
+                                <input type="date" id="recurringEndDate" name="recurringEndDate" value={formData.recurringEndDate} onChange={handleChange} className={inputClasses} min={formData.startDate} />
+                            </div>
                         </div>
-                        <div className="col-span-3 sm:col-span-1">
-                            <label htmlFor="interval" className="block text-sm font-medium text-theme-text-secondary">Every</label>
-                            <input type="number" id="interval" name="interval" value={formData.interval} onChange={handleChange} min="1" className={inputClasses} />
-                        </div>
-                        <div className="col-span-3 sm:col-span-1">
-                            <label htmlFor="recurringEndDate" className="block text-sm font-medium text-theme-text-secondary">Until <span className="text-xs">(optional)</span></label>
-                            <input type="date" id="recurringEndDate" name="recurringEndDate" value={formData.recurringEndDate} onChange={handleChange} className={inputClasses} min={formData.startDate} />
-                        </div>
+                        {formData.frequency === RecurrenceFrequency.WEEKLY && (
+                            <div className="animate-fade-in">
+                                <label className="block text-sm font-medium text-theme-text-secondary mb-2">On these days</label>
+                                <div className="flex justify-between gap-1">
+                                    {WEEK_DAYS.map((day, index) => (
+                                        <button
+                                            type="button"
+                                            key={index}
+                                            onClick={() => handleDayOfWeekToggle(index)}
+                                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full text-sm font-semibold transition-all duration-200 ${
+                                                formData.daysOfWeek.includes(index)
+                                                ? 'bg-theme-brand-primary text-white shadow-md'
+                                                : 'bg-theme-input-bg text-theme-text-secondary hover:bg-theme-nav-hover-bg'
+                                            }`}
+                                        >
+                                            {day}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

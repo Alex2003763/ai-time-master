@@ -38,6 +38,15 @@ function AppContent() {
     setEditingTask(null);
   };
 
+  const handleSaveTask = (taskData: Task | NewTaskPayload) => {
+    if ('id' in taskData && taskData.id) {
+        tasksHook.updateTask(taskData as Task);
+    } else {
+        tasksHook.addTask(taskData as NewTaskPayload);
+    }
+    handleCloseModal();
+  };
+
   const handleOpenAIScheduler = () => {
     setIsAISchedulerOpen(true);
   };
@@ -73,7 +82,7 @@ function AppContent() {
       {isModalOpen && (
         <TaskModal 
           task={editingTask}
-          onSave={editingTask ? tasksHook.updateTask : tasksHook.addTask} 
+          onSave={handleSaveTask} 
           onClose={handleCloseModal} 
         />
       )}

@@ -23,6 +23,7 @@ export interface Recurring {
   frequency: RecurrenceFrequency;
   interval: number;
   endDate?: string; // YYYY-MM-DD
+  daysOfWeek?: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 }
 
 export interface Subtask {

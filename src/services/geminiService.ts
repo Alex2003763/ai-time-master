@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { NewTaskPayload, TaskCategory, TaskPriority } from "../types";
+import { NewTaskPayload, TaskCategory, TaskPriority, RecurrenceFrequency } from "../types";
 
 // Helper to get the API key from local storage
 const getApiKey = (): string | null => {
@@ -12,16 +12,20 @@ const getApiKey = (): string | null => {
 };
 
 const systemInstruction = `You are an intelligent task parsing assistant. Your role is to analyze user-provided text and convert it into a structured JSON object representing a task.
-- Assume today's date is ${new Date().toISOString()} when interpreting relative dates like "tomorrow".
+- **CRITICAL**: Assume today's date is ${new Date().toISOString()}. Pay extremely close attention to relative dates like "tomorrow", "next Friday", etc., to ensure the generated 'startTime' is accurate.
 - Always output a valid JSON object that adheres to the provided schema. Do not output any other text or explanations.
 - For the 'category' field, you must choose one of the following values: ${Object.values(TaskCategory).join(', ')}. If no category fits, use '${TaskCategory.OTHER}'.
 - For the 'priority' field, you must choose one of the following values: ${Object.values(TaskPriority).join(', ')}. If no priority is mentioned, default to '${TaskPriority.MEDIUM}'.
 - For 'startTime' and 'endTime', provide the full date and time in UTC ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ).
 - If the user specifies a time without a date (e.g., "at 2pm"), assume it's for today unless specified otherwise.
-- If no specific time is mentioned for a task on a certain day, treat it as an all-day event by setting the time to T00:00:00.000Z.
+- If no specific time is mentioned for a task on a certain day (e.g., "report due Friday"), treat it as an all-day event by setting the time to T00:00:00.000Z.
 - If an end time is not specified but a duration is (e.g., "for 1 hour"), calculate the endTime based on the startTime.
 - If no description is provided, use the task title as the description.
-- If the user provides a checklist or a list of items, parse them into the 'subtasks' array. Each subtask should be an object with a 'text' property.
+- If the user provides a checklist or a list of items, parse them into the 'subtasks' array.
+- **RECURRENCE RULES**:
+  - For recurring tasks ("every day", "weekly", etc.), parse them into the 'recurring' object.
+  - **IMPORTANT**: If a recurring task does NOT have a specified end date (e.g., "until December"), you MUST set the 'endDate' field to exactly one year after the task's 'startTime'. The format for 'endDate' must be 'YYYY-MM-DD'.
+  - If a weekly recurrence specifies certain days (e.g., "every Monday and Wednesday"), populate the 'daysOfWeek' array with numbers (Sunday=0, ..., Saturday=6).
 `;
 
 const schema = {
@@ -50,6 +54,32 @@ const schema = {
         },
         required: ['text']
       }
+    },
+    recurring: {
+      type: Type.OBJECT,
+      description: "Information about the task's recurrence, if any.",
+      properties: {
+        frequency: {
+          type: Type.STRING,
+          description: `The frequency of recurrence. Must be one of: ${Object.values(RecurrenceFrequency).join(', ')}.`,
+        },
+        interval: {
+          type: Type.INTEGER,
+          description: "The interval of recurrence, e.g., every 2 days. Defaults to 1.",
+        },
+        endDate: {
+          type: Type.STRING,
+          description: "The end date for the recurrence in YYYY-MM-DD format. If the user does not specify an end date, you must default this to one year after the task's start time.",
+        },
+        daysOfWeek: {
+            type: Type.ARRAY,
+            description: "For weekly recurrences, an array of numbers representing days of the week (0=Sunday, 1=Monday, ... 6=Saturday).",
+            items: {
+                type: Type.INTEGER
+            }
+        }
+      },
+      required: ['frequency', 'interval']
     }
   },
   required: ['title', 'description', 'startTime', 'category', 'priority'],

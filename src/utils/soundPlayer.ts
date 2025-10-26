@@ -19,85 +19,126 @@ export const getSelectedSound = (): SoundName => {
   return SOUNDS.BEEP;
 };
 
+// --- NEW AUDIO CONTEXT HANDLING ---
+
+let audioContext: AudioContext | null = null;
+
+const getAudioContext = (): AudioContext | null => {
+  if (typeof window !== 'undefined') {
+    if (!audioContext) {
+      try {
+        // Use `webkitAudioContext` for Safari compatibility
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        audioContext = new AudioContext();
+      } catch (e) {
+        console.error("Web Audio API is not supported in this browser.", e);
+        return null;
+      }
+    }
+    return audioContext;
+  }
+  return null;
+};
+
+/**
+ * Unlocks the audio context. This function MUST be called from within a user 
+ * gesture handler (e.g., a click or tap event) to work on most mobile browsers.
+ */
+export const unlockAudioContext = () => {
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(err => console.error("Failed to resume AudioContext:", err));
+  }
+};
+
 
 export const playSound = (soundName: SoundName = getSelectedSound()) => {
-  try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (!audioContext) return;
+  const ctx = getAudioContext();
+  
+  if (!ctx) {
+    console.error("AudioContext not available.");
+    return;
+  }
+  
+  if (ctx.state !== 'running') {
+    console.warn('AudioContext is not running. Sound may not play. Ensure `unlockAudioContext` is called from a user gesture.');
+    ctx.resume().catch(err => console.error("Failed to resume AudioContext during playback:", err));
+  }
 
+  try {
     switch (soundName) {
       case SOUNDS.CHIME: {
-        const osc1 = audioContext.createOscillator();
-        const gain1 = audioContext.createGain();
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
         osc1.connect(gain1);
-        gain1.connect(audioContext.destination);
+        gain1.connect(ctx.destination);
         osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-        gain1.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.5);
-        osc1.start(audioContext.currentTime);
-        osc1.stop(audioContext.currentTime + 0.5);
+        osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.5);
 
-        const osc2 = audioContext.createOscillator();
-        const gain2 = audioContext.createGain();
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
         osc2.connect(gain2);
-        gain2.connect(audioContext.destination);
+        gain2.connect(ctx.destination);
         osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.2); // E5
-        gain2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.2);
-        gain2.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.7);
-        osc2.start(audioContext.currentTime + 0.2);
-        osc2.stop(audioContext.currentTime + 0.7);
+        osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.2); // E5
+        gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.2);
+        gain2.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.7);
+        osc2.start(ctx.currentTime + 0.2);
+        osc2.stop(ctx.currentTime + 0.7);
         break;
       }
       case SOUNDS.BELL: {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.connect(gain);
-        gain.connect(audioContext.destination);
+        gain.connect(ctx.destination);
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(987.77, audioContext.currentTime); // B5
-        gain.gain.setValueAtTime(0.4, audioContext.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 1.0);
-        osc.start(audioContext.currentTime);
-        osc.stop(audioContext.currentTime + 1.0);
+        osc.frequency.setValueAtTime(987.77, ctx.currentTime); // B5
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 1.0);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 1.0);
         break;
       }
       case SOUNDS.DIGITAL: {
-        const osc1 = audioContext.createOscillator();
-        const gain1 = audioContext.createGain();
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
         osc1.type = 'square';
-        osc1.frequency.setValueAtTime(600, audioContext.currentTime);
-        gain1.gain.setValueAtTime(0.2, audioContext.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.1);
+        osc1.frequency.setValueAtTime(600, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
         osc1.connect(gain1);
-        gain1.connect(audioContext.destination);
+        gain1.connect(ctx.destination);
         osc1.start();
-        osc1.stop(audioContext.currentTime + 0.1);
+        osc1.stop(ctx.currentTime + 0.1);
 
-        const osc2 = audioContext.createOscillator();
-        const gain2 = audioContext.createGain();
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
         osc2.type = 'square';
-        osc2.frequency.setValueAtTime(800, audioContext.currentTime + 0.15);
-        gain2.gain.setValueAtTime(0.2, audioContext.currentTime + 0.15);
-        gain2.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.25);
+        osc2.frequency.setValueAtTime(800, ctx.currentTime + 0.15);
+        gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
         osc2.connect(gain2);
-        gain2.connect(audioContext.destination);
-        osc2.start(audioContext.currentTime + 0.15);
-        osc2.stop(audioContext.currentTime + 0.25);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + 0.15);
+        osc2.stop(ctx.currentTime + 0.25);
         break;
       }
       case SOUNDS.BEEP:
       default: {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
         oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        gainNode.connect(ctx.destination);
         oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5 note
-        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
+        oscillator.frequency.setValueAtTime(523.25, ctx.currentTime); // C5 note
+        gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.5);
         break;
       }
     }

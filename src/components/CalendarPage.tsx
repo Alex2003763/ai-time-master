@@ -62,8 +62,17 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
   const projectedTasks = useMemo(() => {
     const occurrences = new Map<string, Task>(); // Use a map to prevent duplicates
     tasks.forEach(task => {
-        if (task.completed) return; // Don't project completed tasks
-        
+        // Find original completed tasks to exclude their future projections
+        const completedOriginalIds = new Set(tasks.filter(t => t.completed && t.originalId).map(t => t.originalId));
+
+        if (task.completed && !task.recurring) { // Show completed non-recurring tasks
+             occurrences.set(task.id, task);
+             return;
+        }
+        if (task.completed && task.recurring) return; // Hide the template of a recurring task if it was completed
+        if (completedOriginalIds.has(task.id)) return;
+
+
         if (!task.recurring) {
             if (!occurrences.has(task.id)) {
                 occurrences.set(task.id, task);
@@ -73,7 +82,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
             const duration = task.endTime ? new Date(task.endTime).getTime() - new Date(task.startTime).getTime() : 0;
             const recurrenceEndDate = task.recurring.endDate ? new Date(task.recurring.endDate) : null;
             if (recurrenceEndDate) {
-                // Set to end of day to make comparison inclusive and avoid timezone issues
                 recurrenceEndDate.setHours(23, 59, 59, 999);
             }
             
@@ -81,46 +89,53 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
             while (current <= viewEndDate && i < 365) { // Safety break after 365 instances
                 if (current >= viewStartDate && (!recurrenceEndDate || current <= recurrenceEndDate)) {
                      const instanceId = `${task.id}-${current.toISOString()}`;
-                     occurrences.set(instanceId, {
-                        ...task,
-                        id: instanceId, // Unique ID for this instance
-                        startTime: current.toISOString(),
-                        endTime: duration > 0 ? new Date(current.getTime() + duration).toISOString() : undefined,
-                        originalId: task.id,
-                        completed: false, // Projected tasks are never completed
-                    });
+                     if (!occurrences.has(instanceId)) {
+                        occurrences.set(instanceId, {
+                            ...task,
+                            id: instanceId,
+                            startTime: current.toISOString(),
+                            endTime: duration > 0 ? new Date(current.getTime() + duration).toISOString() : undefined,
+                            originalId: task.id,
+                            completed: false,
+                        });
+                     }
                 }
                 
                 if (recurrenceEndDate && current > recurrenceEndDate) break;
                 if (current > viewEndDate) break; // Optimization
                 
-                const { interval, frequency } = task.recurring;
-                const originalDay = current.getDate();
-                const originalMonth = current.getMonth();
+                const { interval, frequency, daysOfWeek } = task.recurring;
                 
                 switch (frequency) {
                     case RecurrenceFrequency.DAILY:
                         current.setDate(current.getDate() + interval);
                         break;
                     case RecurrenceFrequency.WEEKLY:
-                        current.setDate(current.getDate() + 7 * interval);
-                        break;
-                    case RecurrenceFrequency.MONTHLY:
-                        current.setMonth(current.getMonth() + interval);
-                        // If the new date's day is not the same, it means we have overflowed.
-                        // e.g. from Jan 31st to Feb, JS would make it March 2nd or 3rd.
-                        if (current.getDate() !== originalDay) {
-                            // By setting day to 0, we move to the last day of the previous month.
-                            current.setDate(0);
+                        if (daysOfWeek && daysOfWeek.length > 0) {
+                            const sortedDays = [...daysOfWeek].sort((a,b) => a-b);
+                            const currentDay = current.getDay();
+                            let nextDayInWeek = sortedDays.find(day => day > currentDay);
+                            if (nextDayInWeek !== undefined) {
+                                current.setDate(current.getDate() + (nextDayInWeek - currentDay));
+                            } else {
+                                const daysToNextWeek = 7 - currentDay + sortedDays[0];
+                                const weeksToAdd = (interval - 1) * 7;
+                                current.setDate(current.getDate() + daysToNextWeek + weeksToAdd);
+                            }
+                        } else {
+                            current.setDate(current.getDate() + 7 * interval);
                         }
                         break;
+                    case RecurrenceFrequency.MONTHLY: {
+                        const originalDay = current.getDate();
+                        current.setMonth(current.getMonth() + interval, originalDay);
+                        if (current.getDate() !== originalDay) {
+                           current.setDate(0);
+                        }
+                        break;
+                    }
                     case RecurrenceFrequency.YEARLY:
                         current.setFullYear(current.getFullYear() + interval);
-                        // Check if we jumped a month, e.g. from Feb 29 on a leap year to a non-leap year
-                        if (current.getMonth() !== originalMonth) {
-                            // Roll back to the last day of the previous month (which is Feb).
-                            current.setDate(0);
-                        }
                         break;
                 }
                 i++;

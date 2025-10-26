@@ -8,18 +8,34 @@ import DashboardHeader from './DashboardHeader';
 import ConfirmationModal from './ConfirmationModal';
 import AnimatedCheckbox from './AnimatedCheckbox';
 
+
 interface MainContentProps extends ReturnType<typeof useTasks> {
   onEditTask: (task: Task) => void;
 }
 
-const TaskItem: React.FC<{task: Task, onToggle: (id: string) => void, onEdit: (task: Task) => void, onDelete: (id: string) => void}> = ({ task, onToggle, onEdit, onDelete }) => {
+const TaskItem: React.FC<{task: Task, onToggle: (id: string) => void, onEdit: (task: Task) => void, onDelete: (id: string) => void, updateTask: (task: Task) => void}> = ({ task, onToggle, onEdit, onDelete, updateTask }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    
     const hasSubtasks = task.subtasks && task.subtasks.length > 0;
     const completedSubtasks = hasSubtasks ? task.subtasks.filter(st => st.completed).length : 0;
     const totalSubtasks = hasSubtasks ? task.subtasks.length : 0;
     const progressPercentage = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
+    const handleSubtaskToggle = (subtaskId: string) => {
+        const updatedSubtasks = task.subtasks?.map(st => 
+            st.id === subtaskId ? { ...st, completed: !st.completed } : st
+        );
+        if(updatedSubtasks) {
+            updateTask({ ...task, subtasks: updatedSubtasks });
+        }
+    };
+    
     return (
-        <div className={`p-3 rounded-lg mb-2 flex items-center gap-4 transition-all duration-300 ease-in-out ${task.completed ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100'}`}>
+      <div>
+        <div 
+          className={`p-3 rounded-lg mb-2 flex items-center gap-4 transition-all duration-300 ease-in-out relative ${task.completed ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100'} ${hasSubtasks ? 'cursor-pointer hover:bg-theme-nav-hover-bg' : ''}`}
+          onClick={() => hasSubtasks && setIsExpanded(!isExpanded)}
+        >
             <AnimatedCheckbox checked={task.completed} onChange={() => onToggle(task.id)} />
             <div className="flex-grow">
                 <p className={`font-semibold transition-colors duration-300 ${task.completed ? 'line-through text-theme-text-secondary' : ''}`}>{task.title}</p>
@@ -33,15 +49,37 @@ const TaskItem: React.FC<{task: Task, onToggle: (id: string) => void, onEdit: (t
                     </div>
                 )}
             </div>
-            <div className="flex gap-2 flex-shrink-0">
-                <button onClick={() => onEdit(task)} className="p-2 text-theme-text-secondary hover:text-theme-text-primary transition-colors">Edit</button>
-                <button onClick={() => onDelete(task.id)} className="p-2 text-theme-text-secondary hover:text-red-500 transition-colors">Delete</button>
+             <div className="flex gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                <button onClick={() => onEdit(task)} className="p-2 rounded-md text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-nav-hover-bg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg>
+                </button>
+                <button onClick={() => onDelete(task.id)} className="p-2 rounded-md text-theme-text-secondary hover:text-red-500 hover:bg-theme-nav-hover-bg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                </button>
+                {hasSubtasks && (
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-theme-text-secondary transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                )}
             </div>
         </div>
+         {hasSubtasks && (
+                <div className={`pl-12 pr-4 overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-96' : 'max-h-0'}`}>
+                    <div className="space-y-2 pb-3">
+                         {task.subtasks?.map(st => (
+                            <div key={st.id} className="flex items-center gap-3">
+                                <AnimatedCheckbox checked={st.completed} onChange={() => handleSubtaskToggle(st.id)} />
+                                <span className={`text-sm ${st.completed ? 'line-through text-theme-text-secondary' : ''}`}>{st.text}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+      </div>
     )
 }
 
-const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask, isLoading, error, onEditTask }) => {
+const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask, updateTask, isLoading, error, onEditTask }) => {
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const { themeType } = useTheme();
 
@@ -90,7 +128,7 @@ const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask
         title="Confirm Deletion"
         message="Are you sure you want to delete this task? This action cannot be undone."
       />
-
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}
         <div className="lg:col-span-2 flex flex-col gap-6">
@@ -99,9 +137,7 @@ const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask
                <p><span className="font-bold">Error:</span> {error}</p>
              </GlassCard>
            )}
-           <DashboardHeader 
-             isLoading={isLoading} 
-           />
+           <DashboardHeader />
            
            <GlassCard className="p-6 animate-slide-in-up" style={{ animationDelay: '100ms' }}>
              <h2 className="text-xl font-bold mb-4">Productivity Trends</h2>
@@ -134,6 +170,7 @@ const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask
                             onToggle={toggleTask}
                             onEdit={onEditTask}
                             onDelete={(id) => setTaskToDelete(id)}
+                            updateTask={updateTask}
                        />
                     )) : <p className="text-theme-text-secondary">No tasks yet. Add one to get started!</p>}
                 </div>

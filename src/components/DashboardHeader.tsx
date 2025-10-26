@@ -1,10 +1,6 @@
 import React from 'react';
 
-interface DashboardHeaderProps {
-  isLoading: boolean;
-}
-
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ isLoading }) => {
+const DashboardHeader: React.FC = () => {
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-slide-in-up">
       <div>
