@@ -98,15 +98,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
 
     const startTimeWithTimezone = formData.startTime 
         ? `${formData.startDate}T${formData.startTime}:00`
-        : formData.startDate;
+        : `${formData.startDate}T00:00:00`;
     const startDateTime = new Date(startTimeWithTimezone);
 
     let finalEndTime: string | undefined = undefined;
     
-    // An end time can be provided for both recurring and non-recurring tasks.
     if (formData.endTime) {
-        // For recurring tasks, the end time is on the same day as the start time.
-        // For non-recurring, it can be on a different day (formData.endDate).
         const datePartForEndTime = isRecurring ? formData.startDate : (formData.endDate || formData.startDate);
         const endTimeWithTimezone = `${datePartForEndTime}T${formData.endTime}:00`;
         const endDateTime = new Date(endTimeWithTimezone);
@@ -117,9 +114,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
         }
         finalEndTime = endDateTime.toISOString();
     } 
-    // Handle case for multi-day, non-recurring, all-day events
     else if (!isRecurring && formData.endDate) {
-        const endDateTime = new Date(formData.endDate);
+        const endDateTime = new Date(`${formData.endDate}T00:00:00`);
         if (endDateTime <= startDateTime) {
             setError("End date must be after the start date.");
             return;
@@ -141,7 +137,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
             if (formData.daysOfWeek.length > 0) {
                 daysOfWeek = formData.daysOfWeek;
             } else {
-                // If no days are selected for a weekly task, default to the start date's day of the week.
                 daysOfWeek = [startDateTime.getDay()];
             }
         }

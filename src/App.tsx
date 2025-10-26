@@ -78,7 +78,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-theme-bg text-theme-text-primary font-sans antialiased">
+    <div className="min-h-screen text-theme-text-primary font-sans antialiased">
       {isModalOpen && (
         <TaskModal 
           task={editingTask}

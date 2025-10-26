@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Task, TaskCategory, TaskPriority } from '../types';
 import GlassCard from './GlassCard';
 import { useTheme } from '../contexts/ThemeContext';
@@ -25,7 +25,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks }) => {
       return acc;
     }, {} as Record<TaskCategory, number>);
 
-    const categoryData = Object.entries(categoryCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+    const categoryData = Object.entries(categoryCounts).map(([name, value]) => ({ name, value }));
     
     const priorityCounts = tasks.reduce((acc, task) => {
       acc[task.priority] = (acc[task.priority] || 0) + 1;
@@ -35,7 +35,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks }) => {
     return {
       totalTasks,
       completedTasks,
-      completionRate: totalTasks > 0 ? (completedTasks / totalTasks * 100).toFixed(0) : 0,
+      completionRate: totalTasks > 0 ? (completedTasks / totalTasks * 100).toFixed(0) : "0",
       totalFocusTime,
       categoryData,
       priorityCounts,
@@ -50,10 +50,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks }) => {
   };
 
   const tooltipStyle = themeType === 'dark'
-    ? { backgroundColor: 'rgba(20,20,40,0.8)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--color-text-primary)' }
-    : { backgroundColor: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.2)', color: 'var(--color-text-primary)' };
+    ? { backgroundColor: 'rgba(20,20,40,0.8)', border: '1px solid rgba(255,255,255,0.2)' }
+    : { backgroundColor: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.2)' };
 
-  const chartHeight = Math.max(stats.categoryData.length * 50, 200);
 
   return (
     <main className="flex-1">
@@ -91,40 +90,28 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks }) => {
         <GlassCard className="p-6 animate-slide-in-up" style={{ animationDelay: '400ms' }}>
           <h2 className="text-xl font-bold mb-4 text-center">Tasks by Category</h2>
           {stats.categoryData.length > 0 ? (
-            <div className="w-full" style={{ height: `${chartHeight}px` }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={stats.categoryData}
-                  layout="vertical"
-                  margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
-                >
-                  <XAxis type="number" hide />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    stroke="var(--color-text-secondary)"
-                    axisLine={false}
-                    tickLine={false}
-                    width={80}
-                    tick={{ fontSize: 14 }}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'var(--color-nav-hover-bg)' }}
-                    contentStyle={tooltipStyle}
-                    formatter={(value) => [`${value} tasks`, 'Count']}
-                  />
-                  <Bar dataKey="value" barSize={30} radius={[0, 10, 10, 0]}>
+            <div className="w-full h-96">
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={stats.categoryData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={120}
+                    fill="#8884d8"
+                    dataKey="value"
+                    nameKey="name"
+                    // FIX: Explicitly convert percent to a Number before multiplication to fix type error.
+                    label={({ name, percent }) => `${name} ${(Number(percent) * 100).toFixed(0)}%`}
+                  >
                     {stats.categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                     ))}
-                    <LabelList 
-                        dataKey="value" 
-                        position="right" 
-                        offset={10}
-                        style={{ fill: 'var(--color-text-primary)', fontSize: 14, fontWeight: 'bold' }} 
-                    />
-                  </Bar>
-                </BarChart>
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend />
+                </PieChart>
               </ResponsiveContainer>
             </div>
           ) : (

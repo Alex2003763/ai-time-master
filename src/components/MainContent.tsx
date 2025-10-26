@@ -79,7 +79,7 @@ const TaskItem: React.FC<{task: Task, onToggle: (id: string) => void, onEdit: (t
     )
 }
 
-const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask, updateTask, isLoading, error, onEditTask }) => {
+const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask, updateTask, error, onEditTask }) => {
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const { themeType } = useTheme();
 
@@ -108,6 +108,29 @@ const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask
         return { name: dayStr, tasks: tasksCompletedOnDay };
     });
   }, [tasks]);
+
+  const tasksForToday = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    return tasks.filter(task => {
+        const taskStart = new Date(task.startTime);
+        
+        // This handles recurring tasks because their startTime is the next occurrence.
+        // It also handles multi-day tasks that have started but not ended.
+        if (task.endTime) {
+            const taskEnd = new Date(task.endTime);
+            // Check for overlap: (StartA <= EndB) and (EndA >= StartB)
+            return taskStart <= todayEnd && taskEnd >= todayStart;
+        }
+
+        // For tasks without an end time, just check if the start date is today.
+        return taskStart >= todayStart && taskStart <= todayEnd;
+    });
+  }, [tasks]);
+
 
   const chartColors = useMemo(() => {
     return themeType === 'dark' 
@@ -161,9 +184,9 @@ const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask
            </GlassCard>
 
             <GlassCard className="p-6 animate-slide-in-up" style={{ animationDelay: '200ms' }}>
-                 <h2 className="text-xl font-bold mb-4">All Tasks</h2>
+                 <h2 className="text-xl font-bold mb-4">Today's Tasks</h2>
                  <div className="max-h-96 overflow-y-auto pr-2">
-                    {tasks.length > 0 ? tasks.map(task => (
+                    {tasksForToday.length > 0 ? tasksForToday.map(task => (
                        <TaskItem 
                             key={task.id}
                             task={task}
@@ -172,7 +195,7 @@ const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask
                             onDelete={(id) => setTaskToDelete(id)}
                             updateTask={updateTask}
                        />
-                    )) : <p className="text-theme-text-secondary">No tasks yet. Add one to get started!</p>}
+                    )) : <p className="text-theme-text-secondary">No tasks scheduled for today. Enjoy your day! ☀️</p>}
                 </div>
             </GlassCard>
         </div>

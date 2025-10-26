@@ -60,18 +60,20 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
   }, [currentDate, view]);
 
   const projectedTasks = useMemo(() => {
-    const occurrences = new Map<string, Task>(); // Use a map to prevent duplicates
+    const occurrences = new Map<string, Task>();
+    const completedOriginalIds = new Set(tasks.filter(t => t.completed && t.originalId).map(t => t.originalId));
+
     tasks.forEach(task => {
-        // Find original completed tasks to exclude their future projections
-        const completedOriginalIds = new Set(tasks.filter(t => t.completed && t.originalId).map(t => t.originalId));
-
-        if (task.completed && !task.recurring) { // Show completed non-recurring tasks
-             occurrences.set(task.id, task);
-             return;
+        // If an original recurring task has a completed instance, we shouldn't project it further from the original.
+        if (completedOriginalIds.has(task.id)) {
+            return;
         }
-        if (task.completed && task.recurring) return; // Hide the template of a recurring task if it was completed
-        if (completedOriginalIds.has(task.id)) return;
 
+        // Show individual completed tasks.
+        if (task.completed) {
+            occurrences.set(task.id, task);
+            return;
+        }
 
         if (!task.recurring) {
             if (!occurrences.has(task.id)) {
@@ -86,7 +88,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
             }
             
             let i = 0;
-            while (current <= viewEndDate && i < 365) { // Safety break after 365 instances
+            while (current <= viewEndDate && i < 365) {
                 if (current >= viewStartDate && (!recurrenceEndDate || current <= recurrenceEndDate)) {
                      const instanceId = `${task.id}-${current.toISOString()}`;
                      if (!occurrences.has(instanceId)) {
@@ -102,7 +104,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                 }
                 
                 if (recurrenceEndDate && current > recurrenceEndDate) break;
-                if (current > viewEndDate) break; // Optimization
+                if (current > viewEndDate) break;
                 
                 const { interval, frequency, daysOfWeek } = task.recurring;
                 
@@ -161,13 +163,11 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
     const map = new Map<string, Task[]>();
     projectedTasks.forEach(task => {
         const startDate = new Date(task.startTime);
-        // If endTime is missing or before startTime, treat it as a point in time on the same day.
         const endDate = task.endTime && new Date(task.endTime) > startDate ? new Date(task.endTime) : startDate;
         
         let loopDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
         const finalDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
-        // Safety break for very long-running events to avoid infinite loops
         let safetyCounter = 0;
         while (loopDate <= finalDate && safetyCounter < 366) {
             const dateKey = loopDate.toDateString();
@@ -243,12 +243,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                                 {tasksForDay.map(t => (
                                     <button
                                       key={t.id}
-                                      onClick={() => {
-                                          const originalTask = t.originalId ? tasks.find(ot => ot.id === t.originalId) : t;
-                                          if (originalTask) onTaskClick(originalTask);
-                                      }}
+                                      onClick={() => onTaskClick(tasks.find(ot => ot.id === (t.originalId || t.id)) || t)}
                                       title={t.title}
-                                      className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] sm:text-xs truncate transition-transform hover:scale-105 ${categoryColors[t.category].pillBg} ${categoryColors[t.category].text} `}
+                                      className={`w-full text-left px-1.5 py-0.5 rounded text-[10px] sm:text-xs truncate transition-transform hover:scale-105 ${t.completed ? 'opacity-50 line-through' : ''} ${categoryColors[t.category].pillBg} ${categoryColors[t.category].text} `}
                                     >
                                       {t.title}
                                     </button>
@@ -290,13 +287,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                                 {displayedTasks.length > 0 ? displayedTasks.map(t => (
                                     <GlassCard
                                       key={t.id}
-                                      onClick={() => {
-                                          const originalTask = t.originalId ? tasks.find(ot => ot.id === t.originalId) : t;
-                                          if (originalTask) onTaskClick(originalTask);
-                                      }}
-                                      className={`p-3 border-l-4 cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-transform ${categoryColors[t.category].border} ${categoryColors[t.category].bg}`}
+                                      onClick={() => onTaskClick(tasks.find(ot => ot.id === (t.originalId || t.id)) || t)}
+                                      className={`p-3 border-l-4 cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-transform ${t.completed ? 'opacity-50' : ''} ${categoryColors[t.category].border} ${categoryColors[t.category].bg}`}
                                     >
-                                        <p className="font-semibold">{t.title}</p>
+                                        <p className={`font-semibold ${t.completed ? 'line-through' : ''}`}>{t.title}</p>
                                         <p className="text-xs text-theme-text-secondary opacity-80">{t.description.substring(0, 50)}</p>
                                     </GlassCard>
                                 )) : <p className="text-xs text-theme-text-secondary/70 italic py-2">No tasks scheduled.</p>}
@@ -331,11 +325,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                                 {tasksForDay.length > 0 ? tasksForDay.map(t => (
                                     <button
                                       key={t.id}
-                                      onClick={() => {
-                                          const originalTask = t.originalId ? tasks.find(ot => ot.id === t.originalId) : t;
-                                          if (originalTask) onTaskClick(originalTask);
-                                      }}
-                                      className={`w-full text-left p-2 rounded text-xs transition-transform hover:scale-105 ${categoryColors[t.category].pillBg} ${categoryColors[t.category].text} `}
+                                      onClick={() => onTaskClick(tasks.find(ot => ot.id === (t.originalId || t.id)) || t)}
+                                      className={`w-full text-left p-2 rounded text-xs transition-transform hover:scale-105 ${t.completed ? 'opacity-50 line-through' : ''} ${categoryColors[t.category].pillBg} ${categoryColors[t.category].text} `}
                                     >
                                         <p className="font-bold truncate">{t.title}</p>
                                         <p className="opacity-80 whitespace-nowrap overflow-hidden text-ellipsis">{t.description.substring(0, 30)}</p>
@@ -357,10 +348,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
     };
 
     const isAllDay = (task: Task): boolean => {
-      // FIX: The previous logic incorrectly flagged any multi-day event as "all-day".
-      // This revised logic correctly identifies an event as "all-day" only if it
-      // lacks a specific time (i.e., starts at midnight) and has no specific end time.
-      // Multi-day events with start/end times will now correctly appear on the timeline.
       const start = new Date(task.startTime);
       const end = task.endTime ? new Date(task.endTime) : null;
     
@@ -369,7 +356,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
         return startTimeStr === "00:00:00";
       }
       
-      // If the event has a duration (end > start), it's a timed event for the timeline view.
       return false;
     };
 
@@ -392,7 +378,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
             const taskStart = new Date(task.startTime);
             const taskEnd = (task.endTime && new Date(task.endTime).getTime() > taskStart.getTime()) 
                 ? new Date(task.endTime) 
-                : new Date(taskStart.getTime() + 60 * 60 * 1000); // Default to 1 hour if no/invalid end time
+                : new Date(taskStart.getTime() + 60 * 60 * 1000);
             
             const eventStartForDay = new Date(Math.max(taskStart.getTime(), currentDayStart.getTime()));
             const eventEndForDay = new Date(Math.min(taskEnd.getTime(), currentDayEnd.getTime()));
@@ -477,7 +463,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
 
         return (
             <div className="flex-grow flex flex-col overflow-hidden">
-                {/* All-day Section */}
                 {allDayTasks.length > 0 && (
                     <div className="flex-shrink-0 p-2 border-b border-theme-card-border/50">
                         <div className="flex items-center">
@@ -486,11 +471,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                                 {allDayTasks.map(task => (
                                     <button
                                         key={task.id}
-                                        onClick={() => {
-                                            const originalTask = task.originalId ? tasks.find(ot => ot.id === task.originalId) : task;
-                                            if (originalTask) onTaskClick(originalTask);
-                                        }}
-                                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-transform hover:scale-105 ${categoryColors[task.category].pillBg} ${categoryColors[task.category].text}`}
+                                        onClick={() => onTaskClick(tasks.find(ot => ot.id === (task.originalId || task.id)) || task)}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-transform hover:scale-105 ${task.completed ? 'opacity-50 line-through' : ''} ${categoryColors[task.category].pillBg} ${categoryColors[task.category].text}`}
                                     >
                                         {task.title}
                                     </button>
@@ -499,10 +481,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                         </div>
                     </div>
                 )}
-                {/* Time Grid Section */}
                 <div className="flex-grow overflow-y-auto relative scrollbar-thin">
                     <div className="relative" style={{ height: `${HOUR_HEIGHT * 24}px` }}>
-                        {/* Time Gutter */}
                         <div className="absolute top-0 left-0 w-14 h-full">
                             {hours.map(hour => (
                                 <div key={`time-${hour}`} style={{ height: `${HOUR_HEIGHT}px` }} className="relative">
@@ -514,13 +494,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                                 </div>
                             ))}
                         </div>
-                        {/* Grid and Events */}
                         <div className="ml-14 relative h-full">
-                            {/* Grid Lines */}
                             {hours.map(hour => (
                                 <div key={`line-${hour}`} style={{ height: `${HOUR_HEIGHT}px` }} className="border-t border-theme-card-border/30"></div>
                             ))}
-                            {/* Events */}
                             {processedEvents.map(({ task, style }) => {
                                 const heightPx = parseFloat(style.height);
                                 const isCompact = heightPx < 45;
@@ -529,13 +506,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                                 return (
                                     <div key={task.id} className="absolute pr-1" style={style}>
                                         <button
-                                          onClick={() => {
-                                            const originalTask = task.originalId ? tasks.find(ot => ot.id === task.originalId) : task;
-                                            if (originalTask) onTaskClick(originalTask);
-                                          }}
-                                          className={`h-full w-full text-left rounded-lg overflow-hidden flex flex-col cursor-pointer hover:shadow-2xl hover:z-20 transition-all duration-200 ${categoryColors[task.category].bg} border-l-4 ${categoryColors[task.category].border} shadow-lg ${categoryColors[task.category].glow} p-1.5`}
+                                          onClick={() => onTaskClick(tasks.find(ot => ot.id === (task.originalId || task.id)) || task)}
+                                          className={`h-full w-full text-left rounded-lg overflow-hidden flex flex-col cursor-pointer hover:shadow-2xl hover:z-20 transition-all duration-200 ${task.completed ? 'opacity-50' : ''} ${categoryColors[task.category].bg} border-l-4 ${categoryColors[task.category].border} shadow-lg ${categoryColors[task.category].glow} p-1.5`}
                                         >
-                                            <p className={`font-bold ${categoryColors[task.category].text} leading-tight ${isCompact ? 'text-[11px]' : 'text-xs'}`}>
+                                            <p className={`font-bold ${categoryColors[task.category].text} leading-tight ${isCompact ? 'text-[11px]' : 'text-xs'} ${task.completed ? 'line-through' : ''}`}>
                                                 {task.title}
                                             </p>
                                             {canShowTime && (
@@ -548,7 +522,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                                 );
                             })}
                             
-                            {/* "Now" Indicator */}
                             {isToday && (
                                 <div className="absolute left-0 right-0 flex items-center z-30 pointer-events-none" style={{ top: `${nowPosition}px` }}>
                                     <div className="w-2.5 h-2.5 rounded-full bg-theme-brand-tertiary -ml-1.5 ring-4 ring-theme-bg animate-pulse"></div>

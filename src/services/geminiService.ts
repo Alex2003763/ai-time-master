@@ -11,20 +11,35 @@ const getApiKey = (): string | null => {
   }
 };
 
+const getLocalTimezoneInfo = () => {
+    const now = new Date();
+    const timezoneOffset = now.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(timezoneOffset) / 60);
+    const offsetMinutes = Math.abs(timezoneOffset) % 60;
+    const sign = timezoneOffset > 0 ? "-" : "+";
+    const timezoneString = `UTC${sign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+    
+    return {
+        timezoneString,
+        localTimeString: now.toString(),
+    };
+};
+
+const { timezoneString, localTimeString } = getLocalTimezoneInfo();
+
 const systemInstruction = `You are an intelligent task parsing assistant. Your role is to analyze user-provided text and convert it into a structured JSON object representing a task.
-- **CRITICAL**: Assume today's date is ${new Date().toISOString()}. Pay extremely close attention to relative dates like "tomorrow", "next Friday", etc., to ensure the generated 'startTime' is accurate.
-- Always output a valid JSON object that adheres to the provided schema. Do not output any other text or explanations.
+- **CONTEXT**: The user is in timezone ${timezoneString}. The current local time for the user is ${localTimeString}.
+- **TIME INTERPRETATION**: All relative times in the user's query (e.g., "2pm", "tomorrow morning") must be interpreted according to the user's local timezone.
+- **CRITICAL OUTPUT FORMAT**: The final 'startTime' and 'endTime' values in the JSON output MUST be converted to UTC and formatted as a full ISO 8601 string (YYYY-MM-DDTHH:mm:ss.sssZ).
 - For the 'category' field, you must choose one of the following values: ${Object.values(TaskCategory).join(', ')}. If no category fits, use '${TaskCategory.OTHER}'.
 - For the 'priority' field, you must choose one of the following values: ${Object.values(TaskPriority).join(', ')}. If no priority is mentioned, default to '${TaskPriority.MEDIUM}'.
-- For 'startTime' and 'endTime', provide the full date and time in UTC ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ).
-- If the user specifies a time without a date (e.g., "at 2pm"), assume it's for today unless specified otherwise.
-- If no specific time is mentioned for a task on a certain day (e.g., "report due Friday"), treat it as an all-day event by setting the time to T00:00:00.000Z.
+- If no specific time is mentioned for a task on a certain day (e.g., "report due Friday"), treat it as an all-day event by setting the time to T00:00:00.000Z for the user's local date, and then converting that start-of-day timestamp to UTC.
 - If an end time is not specified but a duration is (e.g., "for 1 hour"), calculate the endTime based on the startTime.
 - If no description is provided, use the task title as the description.
 - If the user provides a checklist or a list of items, parse them into the 'subtasks' array.
 - **RECURRENCE RULES**:
   - For recurring tasks ("every day", "weekly", etc.), parse them into the 'recurring' object.
-  - **IMPORTANT**: If a recurring task does NOT have a specified end date (e.g., "until December"), you MUST set the 'endDate' field to exactly one year after the task's 'startTime'. The format for 'endDate' must be 'YYYY-MM-DD'.
+  - If a recurring task does NOT have a specified end date, omit the 'endDate' field entirely. Do not invent an end date.
   - If a weekly recurrence specifies certain days (e.g., "every Monday and Wednesday"), populate the 'daysOfWeek' array with numbers (Sunday=0, ..., Saturday=6).
 `;
 
@@ -69,7 +84,7 @@ const schema = {
         },
         endDate: {
           type: Type.STRING,
-          description: "The end date for the recurrence in YYYY-MM-DD format. If the user does not specify an end date, you must default this to one year after the task's start time.",
+          description: "The optional end date for the recurrence in YYYY-MM-DD format. Omit this field if the recurrence is indefinite or no end date is specified by the user.",
         },
         daysOfWeek: {
             type: Type.ARRAY,

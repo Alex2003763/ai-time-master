@@ -135,8 +135,9 @@ export const useTasks = () => {
         }
 
         // Handle completing a recurring task
-        const completedTask: Task = {
+        const completedInstance: Task = {
             ...task,
+            id: crypto.randomUUID(),
             completed: true,
             completionDate: new Date().toISOString(),
             recurring: undefined,
@@ -156,22 +157,10 @@ export const useTasks = () => {
 
         if (isLastOccurrence) {
             // Mark the final instance as complete and remove recurrence.
-            return prevTasks.map(t => t.id === taskId ? { ...completedTask, originalId: undefined, recurring: undefined } : t);
+            return prevTasks.map(t => t.id === taskId ? { ...task, completed: true, completionDate: new Date().toISOString(), recurring: undefined } : t);
         } else {
-             // Create a new task for the next occurrence.
-            const newRecurringTask: Task = {
-                ...task, // Copy properties like title, category, priority, recurring info
-                id: crypto.randomUUID(), // It gets a new ID
-                startTime: nextOccurrence.startTime,
-                endTime: nextOccurrence.endTime,
-                completed: false, // It's a future task
-                completionDate: undefined,
-                timeSpent: 0, // Reset time spent
-                subtasks: task.subtasks?.map(st => ({ ...st, completed: false, id: crypto.randomUUID() })), // Reset subtasks
-            };
-            
-            // Replace the original task with its completed version, and add the new recurring task.
-            return [...prevTasks.filter(t => t.id !== taskId), completedTask, newRecurringTask];
+            // Replace the original recurring task with its next occurrence and add the completed instance.
+            return [...prevTasks.map(t => t.id === taskId ? nextOccurrence : t), completedInstance];
         }
     });
   }, []);

@@ -72,8 +72,14 @@ const AISchedulerModal: React.FC<AISchedulerModalProps> = ({ isOpen, onClose, on
   
   const formatRecurring = (recurring: NewTaskPayload['recurring']) => {
     if (!recurring) return 'Not recurring';
-    const { frequency, interval, endDate } = recurring;
+    const { frequency, interval, endDate, daysOfWeek } = recurring;
     let str = `Repeats every ${interval > 1 ? interval : ''} ${frequency.replace('ly', '')}${interval > 1 ? 's' : ''}`;
+    
+    if (frequency === 'weekly' && daysOfWeek && daysOfWeek.length > 0) {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        str += ` on ${daysOfWeek.map(d => dayNames[d]).join(', ')}`;
+    }
+
     if (endDate) {
         const date = new Date(endDate);
         // Adjust for timezone offset before displaying
@@ -134,7 +140,7 @@ const AISchedulerModal: React.FC<AISchedulerModalProps> = ({ isOpen, onClose, on
 
         {view === 'review' && parsedTask && (
           <>
-            <h2 className="text-2xl font-bold mb-2">Review Task</h2>
+            <h2 className="text-2xl font-bold mb-2">Review Plan</h2>
             <p className="text-theme-text-secondary mb-6 text-sm">Does this look right? Confirm to add it to your schedule.</p>
             <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
                 <InfoPill label="Title" value={parsedTask.title} className="col-span-2" />

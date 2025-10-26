@@ -11,8 +11,11 @@ const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({ checked, onChange }
       type="button"
       role="checkbox"
       aria-checked={checked}
-      onClick={onChange}
-      className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-theme-card-bg focus:ring-theme-brand-primary ${
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange();
+      }}
+      className={`w-5 h-5 rounded-md flex-shrink-0 border-2 flex items-center justify-center transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-theme-card-bg focus:ring-theme-brand-primary ${
         checked
           ? 'bg-theme-brand-primary border-theme-brand-primary'
           : 'bg-transparent border-theme-input-border hover:border-theme-brand-primary'
