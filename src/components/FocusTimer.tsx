@@ -9,13 +9,18 @@ interface FocusTimerProps {
   logFocusSession: (taskId: string, duration: number) => void;
 }
 
+const workPresets = [{m: 15, s: 0}, {m: 25, s: 0}, {m: 50, s: 0}];
+const breakPresets = [{m: 5, s: 0}, {m: 10, s: 0}, {m: 15, s: 0}];
 
 const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
-  const [workDuration, setWorkDuration] = useState(25);
-  const [breakDuration, setBreakDuration] = useState(5);
+  const [workMinutes, setWorkMinutes] = useState(25);
+  const [workSeconds, setWorkSeconds] = useState(0);
+  const [breakMinutes, setBreakMinutes] = useState(5);
+  const [breakSeconds, setBreakSeconds] = useState(0);
+
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(tasks[0]?.id || null);
   const [sessionType, setSessionType] = useState<'Work' | 'Break'>('Work');
-  const [timeRemaining, setTimeRemaining] = useState(workDuration * 60);
+  const [timeRemaining, setTimeRemaining] = useState(workMinutes * 60 + workSeconds);
   const [isActive, setIsActive] = useState(false);
 
   const intervalRef = useRef<number | null>(null);
@@ -26,9 +31,14 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
     }
   }, [tasks, selectedTaskId]);
 
+  const totalWorkSeconds = useMemo(() => workMinutes * 60 + workSeconds, [workMinutes, workSeconds]);
+  const totalBreakSeconds = useMemo(() => breakMinutes * 60 + breakSeconds, [breakMinutes, breakSeconds]);
+
   useEffect(() => {
-    handleReset();
-  }, [workDuration, breakDuration]);
+    if (!isActive) {
+        handleReset();
+    }
+  }, [totalWorkSeconds, totalBreakSeconds]);
 
   useEffect(() => {
     if (isActive) {
@@ -50,9 +60,11 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
         const nextSession = sessionType === 'Work' ? 'Break' : 'Work';
 
         if (sessionType === 'Work' && selectedTaskId) {
-            logFocusSession(selectedTaskId, workDuration * 60);
+            logFocusSession(selectedTaskId, totalWorkSeconds);
+            let breakTimeStr = `${breakMinutes}m`;
+            if (breakSeconds > 0) breakTimeStr += ` ${breakSeconds}s`;
             sendNotification("Focus session complete!", {
-                body: `Great job! Time for a ${breakDuration}-minute break.`,
+                body: `Great job! Time for a ${breakTimeStr} break.`,
             });
         } else {
             sendNotification("Break's over!", {
@@ -62,13 +74,13 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
         
         setIsActive(false);
         setSessionType(nextSession);
-        setTimeRemaining(nextSession === 'Work' ? workDuration * 60 : breakDuration * 60);
+        setTimeRemaining(nextSession === 'Work' ? totalWorkSeconds : totalBreakSeconds);
     }
-  }, [timeRemaining, workDuration, breakDuration, logFocusSession, selectedTaskId, sessionType]);
+  }, [timeRemaining, totalWorkSeconds, totalBreakSeconds, logFocusSession, selectedTaskId, sessionType, breakMinutes, breakSeconds]);
   
 
   const handleStartPause = async () => {
-    if (!selectedTaskId) return;
+    if (!selectedTaskId || totalWorkSeconds <= 0) return;
     unlockAudioContext(); // Unlock audio context on user interaction
 
     if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
@@ -82,7 +94,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsActive(false);
     setSessionType('Work');
-    setTimeRemaining(workDuration * 60);
+    setTimeRemaining(totalWorkSeconds);
   };
 
   const formatTime = (seconds: number) => {
@@ -92,15 +104,17 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
   };
 
   const totalDuration = useMemo(() => {
-    return (sessionType === 'Work' ? workDuration : breakDuration) * 60;
-  }, [sessionType, workDuration, breakDuration]);
+    return sessionType === 'Work' ? totalWorkSeconds : totalBreakSeconds;
+  }, [sessionType, totalWorkSeconds, totalBreakSeconds]);
 
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
-  const progress = timeRemaining / totalDuration;
+  const progress = totalDuration > 0 ? timeRemaining / totalDuration : 0;
   const offset = circumference * (1 - progress);
   
-  const inputClasses = "mt-1 w-full bg-theme-input-bg border-theme-input-border rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-theme-input-focus";
+  const inputClasses = "w-full text-center bg-theme-input-bg border-theme-input-border rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-theme-input-focus";
+  const presetButtonClasses = "text-xs font-semibold py-1 px-2 rounded-lg transition-all duration-200 backdrop-blur-sm border border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg flex-grow text-center active:scale-95 active:shadow-inner";
+  const isStartDisabled = !selectedTaskId || totalWorkSeconds <= 0;
 
   return (
     <GlassCard className="p-6">
@@ -142,20 +156,48 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
         </div>
 
         <div className="flex justify-center items-center gap-4">
-          <button onClick={handleStartPause} disabled={!selectedTaskId} className={`font-bold py-2 px-6 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 disabled:opacity-50 border-theme-btn-border bg-theme-btn-primary-bg text-theme-btn-primary-text hover:bg-theme-btn-primary-hover-bg`}>{isActive ? 'Pause' : 'Start'}</button>
+          <button onClick={handleStartPause} disabled={isStartDisabled} className={`font-bold py-2 px-6 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 disabled:opacity-50 border-theme-btn-border bg-theme-btn-primary-bg text-theme-btn-primary-text hover:bg-theme-btn-primary-hover-bg`}>{isActive ? 'Pause' : 'Start'}</button>
           <button onClick={handleReset} className="font-medium text-sm py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg">Reset</button>
         </div>
         
-        <div className="flex justify-between gap-4 pt-4">
-            <div className="w-1/2">
-                <label className="block text-sm font-medium text-theme-text-secondary">Work (min)</label>
-                <input type="number" value={workDuration} onChange={e => setWorkDuration(Math.max(1, parseInt(e.target.value) || 1))} className={inputClasses}/>
+        <fieldset className="pt-4 border-t border-theme-card-border/50">
+            <legend className="px-2 text-sm font-semibold text-theme-text-secondary">Session Durations</legend>
+            <div className="flex justify-between gap-4 pt-2">
+                {/* Work Duration Settings */}
+                <div className="w-1/2 flex flex-col gap-2">
+                    <label htmlFor="work-minutes" className="text-sm text-center font-medium text-theme-text-primary">Work</label>
+                    <div className="flex items-center gap-1">
+                        <input id="work-minutes" type="number" value={workMinutes} onChange={e => setWorkMinutes(Math.max(0, parseInt(e.target.value) || 0))} placeholder="min" className={inputClasses} aria-label="Work minutes"/>
+                        <span className="text-theme-text-secondary font-bold text-lg">:</span>
+                        <input type="number" value={workSeconds} onChange={e => setWorkSeconds(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))} placeholder="sec" className={inputClasses} aria-label="Work seconds"/>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                         {workPresets.map(({ m, s }) => (
+                            <button key={`w-${m}-${s}`} type="button" onClick={() => { setWorkMinutes(m); setWorkSeconds(s); }} className={presetButtonClasses} >
+                                {m}m
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                
+                {/* Break Duration Settings */}
+                <div className="w-1/2 flex flex-col gap-2">
+                    <label htmlFor="break-minutes" className="text-sm text-center font-medium text-theme-text-primary">Break</label>
+                    <div className="flex items-center gap-1">
+                        <input id="break-minutes" type="number" value={breakMinutes} onChange={e => setBreakMinutes(Math.max(0, parseInt(e.target.value) || 0))} placeholder="min" className={inputClasses} aria-label="Break minutes"/>
+                        <span className="text-theme-text-secondary font-bold text-lg">:</span>
+                        <input type="number" value={breakSeconds} onChange={e => setBreakSeconds(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))} placeholder="sec" className={inputClasses} aria-label="Break seconds"/>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                         {breakPresets.map(({ m, s }) => (
+                            <button key={`b-${m}-${s}`} type="button" onClick={() => { setBreakMinutes(m); setBreakSeconds(s); }} className={presetButtonClasses}>
+                                {m}m
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
-            <div className="w-1/2">
-                <label className="block text-sm font-medium text-theme-text-secondary">Break (min)</label>
-                <input type="number" value={breakDuration} onChange={e => setBreakDuration(Math.max(1, parseInt(e.target.value) || 1))} className={inputClasses}/>
-            </div>
-        </div>
+        </fieldset>
       </div>
     </GlassCard>
   );

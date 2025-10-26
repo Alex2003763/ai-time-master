@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Manages audio playback for the application using the Web Audio API.
+ * This includes sound definitions, an AudioContext manager, and playback functions.
+ */
+
+/**
+ * An enum of available sound names for notifications.
+ * Using `as const` creates a readonly object with literal types.
+ */
 export const SOUNDS = {
   BEEP: 'Beep',
   CHIME: 'Chime',
@@ -5,8 +14,15 @@ export const SOUNDS = {
   DIGITAL: 'Digital',
 } as const;
 
+/**
+ * A type representing one of the available sound names.
+ */
 export type SoundName = typeof SOUNDS[keyof typeof SOUNDS];
 
+/**
+ * Retrieves the user-selected sound from localStorage, defaulting to 'Beep'.
+ * @returns {SoundName} The selected sound name.
+ */
 export const getSelectedSound = (): SoundName => {
   try {
     const savedSound = window.localStorage.getItem('notification_sound');
@@ -19,130 +35,149 @@ export const getSelectedSound = (): SoundName => {
   return SOUNDS.BEEP;
 };
 
-// --- NEW AUDIO CONTEXT HANDLING ---
+// --- AudioContext Management ---
 
+/**
+ * A singleton instance of the AudioContext.
+ * Using a module-level variable ensures we only create one instance.
+ * @type {AudioContext | null}
+ */
 let audioContext: AudioContext | null = null;
 
+/**
+ * Gets or creates the singleton AudioContext instance.
+ * Handles browser differences (e.g., `webkitAudioContext` for Safari).
+ * @returns {AudioContext | null} The AudioContext instance, or null if not supported.
+ */
 const getAudioContext = (): AudioContext | null => {
-  if (typeof window !== 'undefined') {
-    if (!audioContext) {
-      try {
-        // Use `webkitAudioContext` for Safari compatibility
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        audioContext = new AudioContext();
-      } catch (e) {
-        console.error("Web Audio API is not supported in this browser.", e);
-        return null;
-      }
-    }
+  // Return null if in a non-browser environment
+  if (typeof window === 'undefined') return null;
+
+  // Return the existing context if it's already created
+  if (audioContext) return audioContext;
+
+  try {
+    // Standard AudioContext or prefixed version for Safari
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    audioContext = new AudioContext();
     return audioContext;
+  } catch (e) {
+    console.error("Web Audio API is not supported in this browser.", e);
+    return null;
   }
-  return null;
 };
 
 /**
- * Unlocks the audio context. This function MUST be called from within a user 
- * gesture handler (e.g., a click or tap event) to work on most mobile browsers.
+ * Unlocks the AudioContext after a user gesture.
+ * This is required by modern browsers (especially on mobile) to allow audio playback.
+ * It should be called from within a click or tap event handler.
  */
 export const unlockAudioContext = () => {
   const ctx = getAudioContext();
+  // If the context is in a suspended state, it needs to be resumed.
   if (ctx && ctx.state === 'suspended') {
     ctx.resume().catch(err => console.error("Failed to resume AudioContext:", err));
   }
 };
 
+// --- Sound Playback ---
 
+/**
+ * A helper function to create and play a single audio tone.
+ * @param {AudioContext} ctx - The AudioContext to use.
+ * @param {object} options - The parameters for the tone.
+ * @param {OscillatorType} options.type - The waveform type (e.g., 'sine', 'square').
+ * @param {number} options.freq - The frequency of the tone in Hz.
+ * @param {number} options.gainValue - The volume of the tone (0 to 1).
+ * @param {number} options.startTime - The absolute time to start the tone (from `ctx.currentTime`).
+ * @param {number} options.duration - The duration of the tone in seconds.
+ */
+const createTone = (
+  ctx: AudioContext,
+  {
+    type,
+    freq,
+    gainValue,
+    startTime,
+    duration,
+  }: {
+    type: OscillatorType;
+    freq: number;
+    gainValue: number;
+    startTime: number;
+    duration: number;
+  },
+) => {
+  // Create an oscillator to generate the sound wave
+  const osc = ctx.createOscillator();
+  // Create a gain node to control the volume
+  const gainNode = ctx.createGain();
+
+  // Connect the oscillator to the gain node, and the gain node to the speakers
+  osc.connect(gainNode);
+  gainNode.connect(ctx.destination);
+
+  // Configure the tone's properties
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startTime);
+  gainNode.gain.setValueAtTime(gainValue, startTime);
+  
+  // Fade the sound out smoothly to prevent clicking
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+  // Schedule the tone to start and stop
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+};
+
+/**
+ * Plays the specified sound effect.
+ * @param {SoundName} [soundName=getSelectedSound()] - The name of the sound to play.
+ */
 export const playSound = (soundName: SoundName = getSelectedSound()) => {
   const ctx = getAudioContext();
-  
   if (!ctx) {
-    console.error("AudioContext not available.");
+    console.error("AudioContext not available, cannot play sound.");
     return;
   }
-  
+
+  // Attempt to resume context if it's suspended.
   if (ctx.state !== 'running') {
-    console.warn('AudioContext is not running. Sound may not play. Ensure `unlockAudioContext` is called from a user gesture.');
+    console.warn('AudioContext is suspended. Attempting to resume...');
     ctx.resume().catch(err => console.error("Failed to resume AudioContext during playback:", err));
   }
 
+  const now = ctx.currentTime;
+
   try {
     switch (soundName) {
-      case SOUNDS.CHIME: {
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-        gain1.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
-        osc1.start(ctx.currentTime);
-        osc1.stop(ctx.currentTime + 0.5);
+      case SOUNDS.CHIME:
+        // A pleasant two-tone chime.
+        createTone(ctx, { type: 'sine', freq: 523.25, gainValue: 0.3, startTime: now, duration: 0.5 });
+        createTone(ctx, { type: 'sine', freq: 659.25, gainValue: 0.3, startTime: now + 0.2, duration: 0.5 });
+        break;
 
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.2); // E5
-        gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.2);
-        gain2.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.7);
-        osc2.start(ctx.currentTime + 0.2);
-        osc2.stop(ctx.currentTime + 0.7);
+      case SOUNDS.BELL:
+        // A more complex bell-like sound using multiple sine waves (partials).
+        const fundamental = 440; // A4
+        createTone(ctx, { type: 'sine', freq: fundamental, gainValue: 0.3, startTime: now, duration: 1.5 });
+        createTone(ctx, { type: 'sine', freq: fundamental * 2.02, gainValue: 0.2, startTime: now, duration: 1.2 });
+        createTone(ctx, { type: 'sine', freq: fundamental * 3.01, gainValue: 0.15, startTime: now, duration: 1.0 });
         break;
-      }
-      case SOUNDS.BELL: {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(987.77, ctx.currentTime); // B5
-        gain.gain.setValueAtTime(0.4, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 1.0);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 1.0);
-        break;
-      }
-      case SOUNDS.DIGITAL: {
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'square';
-        osc1.frequency.setValueAtTime(600, ctx.currentTime);
-        gain1.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-        osc1.start();
-        osc1.stop(ctx.currentTime + 0.1);
 
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'square';
-        osc2.frequency.setValueAtTime(800, ctx.currentTime + 0.15);
-        gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.15);
-        gain2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start(ctx.currentTime + 0.15);
-        osc2.stop(ctx.currentTime + 0.25);
+      case SOUNDS.DIGITAL:
+        // A classic digital alarm sound.
+        createTone(ctx, { type: 'square', freq: 600, gainValue: 0.2, startTime: now, duration: 0.1 });
+        createTone(ctx, { type: 'square', freq: 800, gainValue: 0.2, startTime: now + 0.15, duration: 0.1 });
         break;
-      }
+
       case SOUNDS.BEEP:
-      default: {
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(523.25, ctx.currentTime); // C5 note
-        gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.5);
+      default:
+        // A simple, clean beep sound.
+        createTone(ctx, { type: 'sine', freq: 523.25, gainValue: 0.4, startTime: now, duration: 0.5 });
         break;
-      }
     }
   } catch (error) {
-    console.error("Could not play sound:", error);
+    console.error(`Could not play sound "${soundName}":`, error);
   }
 };
