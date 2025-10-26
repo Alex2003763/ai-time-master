@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import GlassCard from './GlassCard';
 import { Task } from '../types';
-import { playSound } from '../utils/soundPlayer';
-import { requestNotificationPermission, sendNotification } from '../utils/notifications';
+import { requestNotificationPermission } from '../utils/notifications';
 
 interface FocusTimerProps {
   tasks: Task[];
@@ -18,12 +17,15 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
   const [breakMinutes, setBreakMinutes] = useState(5);
   const [breakSeconds, setBreakSeconds] = useState(0);
 
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(tasks[0]?.id || null);
-  const [sessionType, setSessionType] = useState<'Work' | 'Break'>('Work');
+  // This state now reflects the service worker's state
   const [timeRemaining, setTimeRemaining] = useState(workMinutes * 60 + workSeconds);
+  const [totalDuration, setTotalDuration] = useState(workMinutes * 60 + workSeconds);
   const [isActive, setIsActive] = useState(false);
+  const [sessionType, setSessionType] = useState<'Work' | 'Break'>('Work');
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(tasks[0]?.id || null);
 
-  const intervalRef = useRef<number | null>(null);
+  const totalWorkSeconds = useMemo(() => workMinutes * 60 + workSeconds, [workMinutes, workSeconds]);
+  const totalBreakSeconds = useMemo(() => breakMinutes * 60 + breakSeconds, [breakMinutes, breakSeconds]);
 
   useEffect(() => {
     if (!selectedTaskId && tasks.length > 0) {
@@ -31,81 +33,94 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
     }
   }, [tasks, selectedTaskId]);
 
-  const totalWorkSeconds = useMemo(() => workMinutes * 60 + workSeconds, [workMinutes, workSeconds]);
-  const totalBreakSeconds = useMemo(() => breakMinutes * 60 + breakSeconds, [breakMinutes, breakSeconds]);
-
   useEffect(() => {
+    // When duration settings change and timer is not active, reset the displayed time.
     if (!isActive) {
-        handleReset();
+        setTimeRemaining(totalWorkSeconds);
+        setTotalDuration(totalWorkSeconds);
     }
-  }, [totalWorkSeconds, totalBreakSeconds]);
+  }, [totalWorkSeconds, totalBreakSeconds, isActive]);
+
+  const handleServiceWorkerMessage = useCallback((event: MessageEvent) => {
+      const { type, payload } = event.data;
+      if (type === 'TIMER_STATE_UPDATE') {
+          setTimeRemaining(payload.timeRemaining);
+          setTotalDuration(payload.totalDuration);
+          setIsActive(payload.isActive);
+          setSessionType(payload.sessionType);
+          // Only update selected task if it's part of the payload, otherwise keep local
+          if (payload.selectedTaskId) {
+            setSelectedTaskId(payload.selectedTaskId);
+          }
+      } else if (type === 'LOG_SESSION') {
+          if (payload.taskId) {
+            logFocusSession(payload.taskId, payload.duration);
+          }
+      }
+  }, [logFocusSession]);
 
   useEffect(() => {
-    if (isActive) {
-      intervalRef.current = window.setInterval(() => {
-        setTimeRemaining(prev => prev - 1);
-      }, 1000);
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+      
+      // Request initial state from SW when component mounts
+      if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'GET_STATE' });
+      }
+
+      return () => {
+          navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      };
+  }, [handleServiceWorkerMessage]);
+
+  const postMessageToSW = (message: any) => {
+    if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage(message);
     } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+        console.error("Service worker not active. Timer functionality may not work in the background.");
+        // Fallback for development environments where SW might not be ready
+         alert("Service worker is not ready. Background timer will not work.");
     }
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isActive]);
-  
-  useEffect(() => {
-    if (timeRemaining <= 0) {
-        playSound();
-        const nextSession = sessionType === 'Work' ? 'Break' : 'Work';
-
-        if (sessionType === 'Work' && selectedTaskId) {
-            logFocusSession(selectedTaskId, totalWorkSeconds);
-            let breakTimeStr = `${breakMinutes}m`;
-            if (breakSeconds > 0) breakTimeStr += ` ${breakSeconds}s`;
-            sendNotification("Focus session complete!", {
-                body: `Great job! Time for a ${breakTimeStr} break.`,
-            });
-        } else {
-            sendNotification("Break's over!", {
-                body: "Time to get back to focus!",
-            });
-        }
-        
-        setIsActive(false);
-        setSessionType(nextSession);
-        setTimeRemaining(nextSession === 'Work' ? totalWorkSeconds : totalBreakSeconds);
-    }
-  }, [timeRemaining, totalWorkSeconds, totalBreakSeconds, logFocusSession, selectedTaskId, sessionType, breakMinutes, breakSeconds]);
-  
+  }
 
   const handleStartPause = async () => {
-    if (!selectedTaskId || totalWorkSeconds <= 0) return;
-    unlockAudioContext(); // Unlock audio context on user interaction
+    if (isStartDisabled) return;
 
-    if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-        await requestNotificationPermission();
+    if (Notification.permission !== 'granted') {
+      await requestNotificationPermission();
     }
-
-    setIsActive(!isActive);
+    
+    if (isActive) {
+      postMessageToSW({ type: 'PAUSE_TIMER' });
+    } else {
+      const selectedTask = tasks.find(t => t.id === selectedTaskId);
+      postMessageToSW({
+        type: 'START_TIMER',
+        payload: {
+          workDuration: totalWorkSeconds,
+          breakDuration: totalBreakSeconds,
+          selectedTaskId: selectedTaskId,
+          selectedTaskTitle: selectedTask?.title || 'Unnamed Task'
+        }
+      });
+    }
   };
   
   const handleReset = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    setIsActive(false);
-    setSessionType('Work');
-    setTimeRemaining(totalWorkSeconds);
+    postMessageToSW({
+        type: 'RESET_TIMER',
+        payload: {
+          workDuration: totalWorkSeconds,
+          breakDuration: totalBreakSeconds,
+        }
+    });
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const s = Math.max(0, seconds);
+    const mins = Math.floor(s / 60);
+    const secs = Math.floor(s % 60);
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
-
-  const totalDuration = useMemo(() => {
-    return sessionType === 'Work' ? totalWorkSeconds : totalBreakSeconds;
-  }, [sessionType, totalWorkSeconds, totalBreakSeconds]);
 
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
@@ -123,7 +138,8 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
         <select 
             value={selectedTaskId || ''} 
             onChange={e => setSelectedTaskId(e.target.value)}
-            className="w-full bg-theme-input-bg border-theme-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-theme-input-focus focus:border-theme-input-focus custom-select"
+            disabled={isActive}
+            className="w-full bg-theme-input-bg border-theme-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-theme-input-focus focus:border-theme-input-focus custom-select disabled:opacity-70"
         >
           {tasks.length > 0 ? (
             tasks.map(task => <option key={task.id} value={task.id}>{task.title}</option>)
@@ -160,7 +176,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ tasks, logFocusSession }) => {
           <button onClick={handleReset} className="font-medium text-sm py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg">Reset</button>
         </div>
         
-        <fieldset className="pt-4 border-t border-theme-card-border/50">
+        <fieldset className="pt-4 border-t border-theme-card-border/50" disabled={isActive}>
             <legend className="px-2 text-sm font-semibold text-theme-text-secondary">Session Durations</legend>
             <div className="flex justify-between gap-4 pt-2">
                 {/* Work Duration Settings */}

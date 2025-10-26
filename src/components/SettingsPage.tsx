@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import GlassCard from './GlassCard';
 import { useTheme, THEMES } from '../contexts/ThemeContext';
-import { playSound, SOUNDS, SoundName, getSelectedSound } from '../utils/soundPlayer';
 
 const SettingsPage: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
   const { theme, setTheme } = useTheme();
-  const [selectedSound, setSelectedSound] = useState<SoundName>(getSelectedSound);
 
   useEffect(() => {
     const storedKey = localStorage.getItem('gemini_api_key') || '';
@@ -19,20 +17,6 @@ const SettingsPage: React.FC = () => {
     localStorage.setItem('gemini_api_key', apiKey);
     setSaveStatus('API Key saved!');
     setTimeout(() => setSaveStatus(''), 3000);
-  };
-
-  const handleSoundChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSound = e.target.value as SoundName;
-    setSelectedSound(newSound);
-    try {
-        window.localStorage.setItem('notification_sound', newSound);
-    } catch (err) {
-        console.error("Failed to save sound setting", err);
-    }
-  };
-
-  const handlePreviewSound = async () => {
-    await playSound(selectedSound);
   };
 
   return (
@@ -62,30 +46,6 @@ const SettingsPage: React.FC = () => {
                   <p className={`mt-2 text-center text-sm font-medium transition-colors ${theme === t.id ? 'text-theme-text-primary' : 'text-theme-text-secondary group-hover:text-theme-text-primary'}`}>{t.name}</p>
                 </div>
               ))}
-            </div>
-        </GlassCard>
-
-        <GlassCard className="p-6">
-            <h2 className="text-xl font-bold mb-2">Sound Settings</h2>
-            <p className="text-theme-text-secondary mb-4">Choose the sound for focus timer notifications.</p>
-            <div className="flex items-center gap-4">
-                <select
-                    value={selectedSound}
-                    onChange={handleSoundChange}
-                    className="flex-grow bg-theme-input-bg border-theme-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-theme-input-focus focus:border-theme-input-focus custom-select"
-                >
-                    {Object.values(SOUNDS).map(sound => (
-                        <option key={sound} value={sound}>{sound}</option>
-                    ))}
-                </select>
-                <button
-                    type="button"
-                    onClick={handlePreviewSound}
-                    className="font-semibold py-2 px-2 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg"
-                    aria-label="Preview sound"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </button>
             </div>
         </GlassCard>
 
