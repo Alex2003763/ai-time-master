@@ -151,12 +151,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
   };
 
   const inputClasses = "block w-full bg-theme-input-bg border-theme-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-theme-input-focus focus:border-theme-input-focus transition";
-  const buttonClasses = "font-semibold py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border";
+  const buttonClasses = "font-semibold rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border";
   const isEditing = !!task;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-      <GlassCard className="w-full max-w-lg p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto animate-pop-in" onClick={(e) => e.stopPropagation()}>
+      <GlassCard className="w-full max-w-lg p-6 sm:p-8 relative animate-pop-in max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-2xl font-bold mb-6">{isEditing ? 'Edit Task' : 'Create New Task'}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -182,7 +182,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
                     </div>
                 ))}
             </div>
-            <button type="button" onClick={handleAddSubtask} className={`text-sm mt-2 ${buttonClasses} bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg`}>
+            <button type="button" onClick={handleAddSubtask} className={`text-sm mt-2 py-1 px-3 ${buttonClasses} bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg`}>
                 + Add Subtask
             </button>
           </div>
@@ -262,8 +262,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
           {error && <p className="text-sm text-red-400 mt-2 animate-fade-in">{error}</p>}
 
           <div className="flex justify-end gap-4 pt-4">
-            <button type="button" onClick={onClose} className={`${buttonClasses} bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg`}>Cancel</button>
-            <button type="submit" className={`${buttonClasses} bg-theme-btn-primary-bg text-theme-btn-primary-text hover:bg-theme-btn-primary-hover-bg`}>{isEditing ? 'Save Changes' : 'Create Task'}</button>
+            <button type="button" onClick={onClose} className={`${buttonClasses} py-2 px-4 bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg`}>Cancel</button>
+            <button type="submit" className={`${buttonClasses} py-2 px-4 bg-theme-btn-primary-bg text-theme-btn-primary-text hover:bg-theme-btn-primary-hover-bg`}>{isEditing ? 'Save Changes' : 'Create Task'}</button>
           </div>
         </form>
       </GlassCard>

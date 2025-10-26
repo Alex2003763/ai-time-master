@@ -535,8 +535,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ tasks, onTaskClick }) => {
                             
                             {/* "Now" Indicator */}
                             {isToday && (
-                                <div className="absolute left-0 right-0 flex items-center z-30 pointer-events-none animate-pulse" style={{ top: `${nowPosition}px` }}>
-                                    <div className="w-2.5 h-2.5 rounded-full bg-theme-brand-tertiary -ml-1.5 ring-4 ring-theme-bg"></div>
+                                <div className="absolute left-0 right-0 flex items-center z-30 pointer-events-none" style={{ top: `${nowPosition}px` }}>
+                                    <div className="w-2.5 h-2.5 rounded-full bg-theme-brand-tertiary -ml-1.5 ring-4 ring-theme-bg animate-pulse"></div>
                                     <div className="w-full h-0.5 bg-theme-brand-tertiary"></div>
                                 </div>
                             )}

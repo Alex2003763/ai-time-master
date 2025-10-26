@@ -6,6 +6,7 @@ import GlassCard from './GlassCard';
 import { useTheme } from '../contexts/ThemeContext';
 import DashboardHeader from './DashboardHeader';
 import ConfirmationModal from './ConfirmationModal';
+import AnimatedCheckbox from './AnimatedCheckbox';
 
 interface MainContentProps extends ReturnType<typeof useTasks> {
   onEditTask: (task: Task) => void;
@@ -18,13 +19,13 @@ const TaskItem: React.FC<{task: Task, onToggle: (id: string) => void, onEdit: (t
     const progressPercentage = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
     return (
-        <div className={`p-3 rounded-lg mb-2 flex items-center gap-4 transition-opacity ${task.completed ? 'opacity-50' : ''}`}>
-            <input type="checkbox" checked={task.completed} onChange={() => onToggle(task.id)} className="form-checkbox h-5 w-5 rounded bg-theme-input-bg border-theme-input-border text-theme-brand-primary focus:ring-theme-brand-primary flex-shrink-0" />
+        <div className={`p-3 rounded-lg mb-2 flex items-center gap-4 transition-all duration-300 ease-in-out ${task.completed ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100'}`}>
+            <AnimatedCheckbox checked={task.completed} onChange={() => onToggle(task.id)} />
             <div className="flex-grow">
-                <p className={`font-semibold ${task.completed ? 'line-through' : ''}`}>{task.title}</p>
+                <p className={`font-semibold transition-colors duration-300 ${task.completed ? 'line-through text-theme-text-secondary' : ''}`}>{task.title}</p>
                 <p className="text-sm text-theme-text-secondary">{new Date(task.startTime).toLocaleDateString()}</p>
                  {hasSubtasks && (
-                    <div className="mt-1.5 flex items-center gap-2">
+                    <div className={`mt-1.5 flex items-center gap-2 transition-opacity duration-300 ${task.completed ? 'opacity-50' : ''}`}>
                          <div className="w-full bg-theme-progress-track rounded-full h-1.5">
                             <div className="bg-theme-brand-secondary h-1.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
                         </div>

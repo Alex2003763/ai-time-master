@@ -79,48 +79,48 @@ body[data-theme='light'] .custom-select {
 }
 body[data-theme='light'] select option { background-color: var(--color-bg); }
 
-/* 2. Original Dark Theme */
+/* 2. Original Dark Theme (Improved) */
 body[data-theme='dark'] {
-  --color-bg: #0c0a1a;
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #9ca3af;
-  --color-card-bg: rgba(255, 255, 255, 0.05);
-  --color-card-border: rgba(255, 255, 255, 0.1);
-  --color-brand-primary: #22d3ee;
-  --color-brand-primary-hover: #06b6d4;
-  --color-brand-secondary: #a855f7;
-  --color-brand-secondary-hover: #9333ea;
-  --color-brand-tertiary: #e879f9;
-  --color-brand-tertiary-hover: #d946ef;
-  --color-nav-active-bg: rgba(255, 255, 255, 0.1);
-  --color-nav-hover-bg: rgba(255, 255, 255, 0.05);
-  --color-input-bg: rgba(255, 255, 255, 0.1);
-  --color-input-border: rgba(255, 255, 255, 0.2);
-  --color-input-focus: #22d3ee;
-  --color-progress-track: rgba(255, 255, 255, 0.1);
-  --color-btn-primary-bg: rgba(34, 211, 238, 0.15);
+  --color-bg: #0c0a1a; /* Deeper, more pleasant background */
+  --color-text-primary: #e5e7eb; /* Softer white for better readability */
+  --color-text-secondary: #9ca3af; /* Lighter gray for less harsh contrast */
+  --color-card-bg: rgba(28, 25, 52, 0.4); /* Complements the new background */
+  --color-card-border: rgba(255, 255, 255, 0.08); /* Subtle border */
+  --color-brand-primary: #2dd4bf;
+  --color-brand-primary-hover: #14b8a6;
+  --color-brand-secondary: #c084fc;
+  --color-brand-secondary-hover: #a855f7;
+  --color-brand-tertiary: #f472b6;
+  --color-brand-tertiary-hover: #ec4899;
+  --color-nav-active-bg: rgba(45, 212, 191, 0.2); /* More visible active state */
+  --color-nav-hover-bg: rgba(255, 255, 255, 0.05); /* Softer hover */
+  --color-input-bg: rgba(0, 0, 0, 0.25);
+  --color-input-border: rgba(255, 255, 255, 0.1);
+  --color-input-focus: #2dd4bf;
+  --color-progress-track: rgba(255, 255, 255, 0.08);
+  --color-btn-primary-bg: rgba(45, 212, 191, 0.2);
   --color-btn-primary-text: var(--color-brand-primary);
-  --color-btn-primary-hover-bg: rgba(34, 211, 238, 0.25);
-  --color-btn-secondary-bg: rgba(168, 85, 247, 0.15);
+  --color-btn-primary-hover-bg: rgba(45, 212, 191, 0.3);
+  --color-btn-secondary-bg: rgba(192, 132, 252, 0.2);
   --color-btn-secondary-text: var(--color-brand-secondary);
-  --color-btn-secondary-hover-bg: rgba(168, 85, 247, 0.25);
-  --color-btn-tertiary-bg: rgba(232, 121, 249, 0.15);
+  --color-btn-secondary-hover-bg: rgba(192, 132, 252, 0.3);
+  --color-btn-tertiary-bg: rgba(244, 114, 182, 0.2);
   --color-btn-tertiary-text: var(--color-brand-tertiary);
-  --color-btn-tertiary-hover-bg: rgba(232, 121, 249, 0.25);
-  --color-btn-default-bg: rgba(255, 255, 255, 0.08);
-  --color-btn-default-text: var(--color-text-secondary);
-  --color-btn-default-hover-bg: rgba(255, 255, 255, 0.12);
-  --color-btn-danger-bg: rgba(248, 113, 113, 0.15);
-  --color-btn-danger-text: #f87171;
-  --color-btn-danger-hover-bg: rgba(248, 113, 113, 0.25);
+  --color-btn-tertiary-hover-bg: rgba(244, 114, 182, 0.3);
+  --color-btn-default-bg: rgba(55, 65, 81, 0.7);
+  --color-btn-default-text: var(--color-text-primary);
+  --color-btn-default-hover-bg: rgba(75, 85, 99, 0.8);
+  --color-btn-danger-bg: rgba(244, 63, 94, 0.2);
+  --color-btn-danger-text: #fca5a5; /* Softer red text for better aesthetics */
+  --color-btn-danger-hover-bg: rgba(244, 63, 94, 0.3);
   --color-btn-border: rgba(255, 255, 255, 0.1);
 }
  body[data-theme='dark'] {
    background-image:
-    radial-gradient(at 20% 20%, hsla(212, 80%, 45%, 0.2) 0px, transparent 50%),
-    radial-gradient(at 80% 20%, hsla(280, 80%, 50%, 0.2) 0px, transparent 50%),
-    radial-gradient(at 20% 80%, hsla(320, 80%, 55%, 0.2) 0px, transparent 50%),
-    radial-gradient(at 80% 80%, hsla(180, 80%, 40%, 0.2) 0px, transparent 50%);
+    radial-gradient(at 20% 20%, hsla(174, 72%, 55%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 20%, hsla(275, 87%, 68%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 20% 80%, hsla(330, 80%, 65%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 80%, hsla(210, 90%, 70%, 0.1) 0px, transparent 50%);
 }
 
 /* 3. Twilight Glow Theme (Dark) */

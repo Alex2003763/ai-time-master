@@ -142,15 +142,28 @@ export const useTasks = () => {
                 : t
             );
         } else {
-            // Generate a completed instance and update the original recurring task
-            const completedInstance: Task = {
+            // The task being toggled becomes a completed, non-recurring instance.
+            const completedTask: Task = {
                 ...task,
-                id: crypto.randomUUID(),
                 completed: true,
                 completionDate: new Date().toISOString(),
                 recurring: undefined,
             };
-            return [...prevTasks.map(t => t.id === taskId ? nextOccurrence : t), completedInstance];
+
+            // A new task is created for the next occurrence.
+            const newRecurringTask: Task = {
+                ...task, // Copy properties like title, category, priority, recurring info
+                id: crypto.randomUUID(), // It gets a new ID
+                startTime: nextOccurrence.startTime,
+                endTime: nextOccurrence.endTime,
+                completed: false, // It's a future task
+                completionDate: undefined,
+                timeSpent: 0, // Reset time spent
+                subtasks: task.subtasks?.map(st => ({ ...st, completed: false, id: crypto.randomUUID() })), // Reset subtasks
+            };
+            
+            // Replace the original task with its completed version, and add the new recurring task.
+            return [...prevTasks.map(t => t.id === taskId ? completedTask : t), newRecurringTask];
         }
     });
   }, []);
