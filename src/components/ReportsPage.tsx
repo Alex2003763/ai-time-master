@@ -90,20 +90,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks }) => {
         <GlassCard className="p-6 animate-slide-in-up" style={{ animationDelay: '400ms' }}>
           <h2 className="text-xl font-bold mb-4 text-center">Tasks by Category</h2>
           {stats.categoryData.length > 0 ? (
-            <div className="w-full h-96">
+            <div className="w-full h-96 relative">
               <ResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={stats.categoryData}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
+                    innerRadius={80}
                     outerRadius={120}
                     fill="#8884d8"
                     dataKey="value"
                     nameKey="name"
-                    // FIX: Explicitly convert percent to a Number before multiplication to fix type error.
-                    label={({ name, percent }) => `${name} ${(Number(percent) * 100).toFixed(0)}%`}
+                    paddingAngle={5}
+                    cornerRadius={8}
                   >
                     {stats.categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
@@ -113,6 +113,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks }) => {
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <p className="text-4xl font-bold">{stats.totalTasks}</p>
+                  <p className="text-theme-text-secondary">Total Tasks</p>
+                </div>
+              </div>
             </div>
           ) : (
             <p className="text-theme-text-secondary text-center py-10">No tasks with categories to display.</p>

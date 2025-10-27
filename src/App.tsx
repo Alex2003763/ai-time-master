@@ -38,7 +38,7 @@ function AppContent() {
     setEditingTask(null);
   };
 
-  const handleSaveTask = (taskData: Task | NewTaskPayload) => {
+ const handleSaveTask = (taskData: Task | NewTaskPayload) => {
     if ('id' in taskData && taskData.id) {
         tasksHook.updateTask(taskData as Task);
     } else {
@@ -71,7 +71,7 @@ function AppContent() {
       case 'Reports':
         return <ReportsPage tasks={tasksHook.tasks} />;
       case 'Settings':
-        return <SettingsPage />; 
+        return <SettingsPage tasks={tasksHook.tasks} addTasks={tasksHook.addTasks} />; 
       default:
         return <MainContent {...tasksHook} onEditTask={handleOpenEditTaskModal} />;
     }

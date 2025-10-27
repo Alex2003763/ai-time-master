@@ -29,48 +29,53 @@ const calculateNextOccurrence = (task: Task): Task => {
     const { startTime, endTime, recurring } = task;
     if (!recurring) return task;
 
-    const currentStartDate = new Date(startTime);
+    let currentStartDate = new Date(startTime);
     let nextStartDate = new Date(currentStartDate);
 
-    const duration = endTime ? new Date(endTime).getTime() - currentStartDate.getTime() : 0;
+    const duration = endTime ? new Date(endTime).getTime() - new Date(startTime).getTime() : 0;
 
     switch (recurring.frequency) {
         case RecurrenceFrequency.DAILY:
             nextStartDate.setDate(currentStartDate.getDate() + recurring.interval);
             break;
-        case RecurrenceFrequency.WEEKLY: {
+        case RecurrenceFrequency.WEEKLY:
             if (recurring.daysOfWeek && recurring.daysOfWeek.length > 0) {
-                const sortedDays = recurring.daysOfWeek.sort((a,b) => a-b);
-                const currentDay = currentStartDate.getDay();
-                
-                let nextDayInWeek = sortedDays.find(day => day > currentDay);
-
-                if (nextDayInWeek !== undefined) {
-                    // Next occurrence is in the same week
-                    nextStartDate.setDate(currentStartDate.getDate() + (nextDayInWeek - currentDay));
-                } else {
-                    // Next occurrence is in a future week
-                    const daysToNextWeek = 7 - currentDay + sortedDays[0];
-                    const weeksToAdd = (recurring.interval - 1) * 7;
-                    nextStartDate.setDate(currentStartDate.getDate() + daysToNextWeek + weeksToAdd);
-                }
+                 const sortedDays = [...recurring.daysOfWeek].sort((a,b) => a-b);
+                 const currentDay = currentStartDate.getDay();
+                 let nextDayInWeek = sortedDays.find(day => day > currentDay);
+                 
+                 if (nextDayInWeek !== undefined) {
+                     nextStartDate.setDate(currentStartDate.getDate() + (nextDayInWeek - currentDay));
+                 } else {
+                     const daysToNextWeek = 7 - currentDay + sortedDays[0];
+                     const weeksToAdd = (recurring.interval - 1) * 7;
+                     nextStartDate.setDate(currentStartDate.getDate() + daysToNextWeek + weeksToAdd);
+                 }
             } else {
-                // Fallback for old weekly tasks without daysOfWeek
                 nextStartDate.setDate(currentStartDate.getDate() + 7 * recurring.interval);
             }
             break;
-        }
         case RecurrenceFrequency.MONTHLY: {
             const originalDay = currentStartDate.getDate();
+            // Add the interval to the month.
             nextStartDate.setMonth(currentStartDate.getMonth() + recurring.interval, originalDay);
-            // Handle month-end issues, e.g., Jan 31 -> Feb 28
+            // If the new date's day is not the same, it means we have overflowed.
+            // e.g. from Jan 31st to Feb, JS would make it March 2nd or 3rd.
             if (nextStartDate.getDate() !== originalDay) {
+                // By setting day to 0, we move to the last day of the previous month.
+                // This correctly handles rolling back from March to the end of Feb.
                 nextStartDate.setDate(0);
             }
             break;
         }
         case RecurrenceFrequency.YEARLY: {
+            const originalMonth = currentStartDate.getMonth();
             nextStartDate.setFullYear(currentStartDate.getFullYear() + recurring.interval);
+            // Check if we jumped a month, e.g. from Feb 29 on a leap year to a non-leap year
+            if (nextStartDate.getMonth() !== originalMonth) {
+                 // Roll back to the last day of the previous month (which is Feb).
+                nextStartDate.setDate(0);
+            }
             break;
         }
     }
@@ -111,6 +116,17 @@ export const useTasks = () => {
     };
     setTasks(prevTasks => [...prevTasks, newTask]);
   }, []);
+
+  const addTasks = useCallback((newTasks: NewTaskPayload[]) => {
+    const tasksToAdd: Task[] = newTasks.map(task => ({
+      ...task,
+      id: crypto.randomUUID(),
+      completed: false,
+      timeSpent: 0,
+      subtasks: task.subtasks?.map(st => ({...st, id: crypto.randomUUID() })) || [],
+    }));
+    setTasks(prevTasks => [...prevTasks, ...tasksToAdd]);
+  }, []);
   
   const updateTask = useCallback((updatedTask: Task) => {
     setTasks(prevTasks => prevTasks.map(task => (task.id === updatedTask.id ? updatedTask : task)));
@@ -135,15 +151,6 @@ export const useTasks = () => {
         }
 
         // Handle completing a recurring task
-        const completedInstance: Task = {
-            ...task,
-            id: crypto.randomUUID(),
-            completed: true,
-            completionDate: new Date().toISOString(),
-            recurring: undefined,
-            originalId: task.id, // Keep track of the original series
-        };
-
         const nextOccurrence = calculateNextOccurrence(task);
         const recurrenceEndDate = task.recurring.endDate ? new Date(task.recurring.endDate) : null;
         
@@ -153,13 +160,21 @@ export const useTasks = () => {
         }
         
         // If the next occurrence is after the end date, this is the last one.
-        const isLastOccurrence = recurrenceEndDate && new Date(nextOccurrence.startTime) > recurrenceEndDate;
-
-        if (isLastOccurrence) {
-            // Mark the final instance as complete and remove recurrence.
-            return prevTasks.map(t => t.id === taskId ? { ...task, completed: true, completionDate: new Date().toISOString(), recurring: undefined } : t);
+        if (recurrenceEndDate && new Date(nextOccurrence.startTime) > recurrenceEndDate) {
+            return prevTasks.map(t =>
+                t.id === taskId
+                ? { ...t, completed: true, completionDate: new Date().toISOString(), recurring: undefined }
+                : t
+            );
         } else {
-            // Replace the original recurring task with its next occurrence and add the completed instance.
+            // Generate a completed instance and update the original recurring task
+            const completedInstance: Task = {
+                ...task,
+                id: crypto.randomUUID(),
+                completed: true,
+                completionDate: new Date().toISOString(),
+                recurring: undefined,
+            };
             return [...prevTasks.map(t => t.id === taskId ? nextOccurrence : t), completedInstance];
         }
     });
@@ -175,5 +190,5 @@ export const useTasks = () => {
     );
   }, []);
 
-  return { tasks, setTasks, addTask, updateTask, deleteTask, toggleTask, isLoading, setIsLoading, error, setError, logFocusSession };
+  return { tasks, setTasks, addTask, addTasks, updateTask, deleteTask, toggleTask, isLoading, setIsLoading, error, setError, logFocusSession };
 };

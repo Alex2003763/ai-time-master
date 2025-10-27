@@ -195,7 +195,7 @@ const MainContent: React.FC<MainContentProps> = ({ tasks, deleteTask, toggleTask
                             onDelete={(id) => setTaskToDelete(id)}
                             updateTask={updateTask}
                        />
-                    )) : <p className="text-theme-text-secondary">No tasks scheduled for today. Enjoy your day! ☀️</p>}
+                    )) : <p className="text-theme-text-secondary">No tasks for today. Add one or enjoy your day!</p>}
                 </div>
             </GlassCard>
         </div>
