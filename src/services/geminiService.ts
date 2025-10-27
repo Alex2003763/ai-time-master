@@ -29,7 +29,6 @@ const { timezoneString, localTimeString } = getLocalTimezoneInfo();
 
 const systemInstruction = `You are an intelligent task parsing assistant. Your role is to analyze user-provided text and convert it into a structured JSON object representing a task.
 - **CONTEXT**: The user is in timezone ${timezoneString}. The current local time for the user is ${localTimeString}.
-- **TIME INTERPRETATION**: All relative times in the user's query (e.g., "2pm", "tomorrow morning") must be interpreted according to the user's local timezone.
 - **CRITICAL OUTPUT FORMAT**: The final 'startTime' and 'endTime' values in the JSON output MUST be converted to UTC and formatted as a full ISO 8601 string (YYYY-MM-DDTHH:mm:ss.sssZ).
 - For the 'category' field, you must choose one of the following values: ${Object.values(TaskCategory).join(', ')}. If no category fits, use '${TaskCategory.OTHER}'.
 - For the 'priority' field, you must choose one of the following values: ${Object.values(TaskPriority).join(', ')}. If no priority is mentioned, default to '${TaskPriority.MEDIUM}'.
@@ -106,7 +105,10 @@ export const parseTaskFromText = async (text: string): Promise<NewTaskPayload> =
     throw new Error("Gemini API key not set. Please add your key in the Settings page.");
   }
   
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({
+    apiKey,
+    baseURL: "https://rainbow-gumption-2fc85c.netlify.app/v1",
+  });
   const model = 'gemini-2.5-flash';
 
   try {
