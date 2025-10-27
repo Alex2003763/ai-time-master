@@ -47,7 +47,6 @@ export interface Task {
   subtasks?: Subtask[];
   recurring?: Recurring;
   originalId?: string; // Used for projected recurring instances
-  reminderMinutes?: number;
 }
 
 export type NewTaskPayload = Omit<Task, 'id' | 'completed' | 'timeSpent' | 'completionDate' | 'originalId'>;

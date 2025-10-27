@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import FocusPage from './components/FocusPage';
@@ -12,7 +12,7 @@ import { Task, NewTaskPayload } from './types';
 import TaskModal from './components/TaskModal';
 import AISchedulerModal from './components/AISchedulerModal';
 import FloatingActionButton from './components/FloatingActionButton';
-import { updateAllReminders } from './utils/reminderManager';
+import ConfirmationModal from './components/ConfirmationModal';
 
 function AppContent() {
   const tasksHook = useTasks();
@@ -22,10 +22,7 @@ function AppContent() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const [isAISchedulerOpen, setIsAISchedulerOpen] = useState(false);
-
-  useEffect(() => {
-    updateAllReminders(tasksHook.tasks);
-  }, [tasksHook.tasks]);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 
   const handleOpenAddTaskModal = () => {
     setEditingTask(null);
@@ -43,15 +40,20 @@ function AppContent() {
     setEditingTask(null);
   };
 
-  const handleSaveTask = (taskData: Task | NewTaskPayload) => {
-    if ('id' in taskData && taskData.id) {
-        tasksHook.updateTask(taskData as Task);
-    } else {
-        tasksHook.addTask(taskData as NewTaskPayload);
+  const handleDeleteRequest = (taskId: string) => {
+    // Close the edit modal before opening the confirmation modal
+    if (isModalOpen) {
+      handleCloseModal();
     }
-    handleCloseModal();
+    setTaskToDelete(taskId);
   };
 
+  const confirmDelete = () => {
+    if (taskToDelete) {
+      tasksHook.deleteTask(taskToDelete);
+      setTaskToDelete(null);
+    }
+  };
 
   const handleOpenAIScheduler = () => {
     setIsAISchedulerOpen(true);
@@ -69,7 +71,7 @@ function AppContent() {
   const renderContent = () => {
     switch (activePage) {
       case 'Dashboard':
-        return <MainContent {...tasksHook} onEditTask={handleOpenEditTaskModal} />;
+        return <MainContent {...tasksHook} onEditTask={handleOpenEditTaskModal} onDeleteRequest={handleDeleteRequest} />;
       case 'Focus':
         return <FocusPage tasks={tasksHook.tasks.filter(t => !t.completed)} logFocusSession={tasksHook.logFocusSession} />;
       case 'Calendar':
@@ -77,20 +79,28 @@ function AppContent() {
       case 'Reports':
         return <ReportsPage tasks={tasksHook.tasks} />;
       case 'Settings':
-        // FIX: Pass the required 'tasks' and 'addTasks' props to the SettingsPage component.
+        // FIX: Pass required 'tasks' and 'addTasks' props to the SettingsPage component.
         return <SettingsPage tasks={tasksHook.tasks} addTasks={tasksHook.addTasks} />; 
       default:
-        return <MainContent {...tasksHook} onEditTask={handleOpenEditTaskModal} />;
+        return <MainContent {...tasksHook} onEditTask={handleOpenEditTaskModal} onDeleteRequest={handleDeleteRequest} />;
     }
   };
 
   return (
     <div className="min-h-screen text-theme-text-primary font-sans antialiased">
+       <ConfirmationModal
+        isOpen={!!taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this task? This action cannot be undone."
+      />
       {isModalOpen && (
         <TaskModal 
           task={editingTask}
           onSave={editingTask ? tasksHook.updateTask : tasksHook.addTask} 
-          onClose={handleCloseModal} 
+          onClose={handleCloseModal}
+          onDelete={handleDeleteRequest} 
         />
       )}
       <AISchedulerModal

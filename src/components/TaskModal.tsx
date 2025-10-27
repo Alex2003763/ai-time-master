@@ -1,23 +1,20 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Task, TaskPriority, TaskCategory, NewTaskPayload, Subtask, Recurring, RecurrenceFrequency } from '../types';
 import GlassCard from './GlassCard';
-import { requestNotificationPermission } from '../utils/notifications';
-
 
 interface TaskModalProps {
   task: Task | null;
   onSave: (task: Task | NewTaskPayload) => void;
   onClose: () => void;
+  onDelete?: (taskId: string) => void;
 }
 
-const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
+const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose, onDelete }) => {
     
   const toLocalDateString = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
   const isAllDayEvent = (isoString: string | undefined) => !isoString || isoString.endsWith('T00:00:00.000Z');
   
   const [isRecurring, setIsRecurring] = useState(() => !!task?.recurring);
-  const permissionRequestedRef = useRef(false);
-
 
   const [formData, setFormData] = useState(() => {
     const start = task?.startTime ? new Date(task.startTime) : new Date();
@@ -36,7 +33,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
       frequency: task?.recurring?.frequency || RecurrenceFrequency.DAILY,
       interval: task?.recurring?.interval || 1,
       recurringEndDate: task?.recurring?.endDate || '',
-      reminderMinutes: task?.reminderMinutes === undefined ? '' : String(task.reminderMinutes),
     };
   });
   
@@ -47,16 +43,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
     setError(null);
 
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleReminderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { value } = e.target;
-    setFormData(prev => ({ ...prev, reminderMinutes: value }));
-
-    if (value && !permissionRequestedRef.current) {
-        await requestNotificationPermission();
-        permissionRequestedRef.current = true;
-    }
   };
 
   const handleRecurringToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,8 +131,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
             endDate: formData.recurringEndDate || undefined,
         };
     }
-    
-    const reminderMinutes = formData.reminderMinutes !== '' ? Number(formData.reminderMinutes) : undefined;
 
     const payload: NewTaskPayload = {
         title: formData.title,
@@ -157,7 +141,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
         priority: formData.priority,
         subtasks: formData.subtasks.filter(st => st.text.trim() !== ''),
         recurring,
-        reminderMinutes,
     };
 
     if (task) {
@@ -170,7 +153,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
 
   const inputClasses = "block w-full bg-theme-input-bg border-theme-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-theme-input-focus focus:border-theme-input-focus transition";
   const isEditing = !!task;
-  const isTimedEvent = formData.startTime !== '';
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
@@ -225,20 +207,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
                 <input type="time" id="endTime" name="endTime" value={formData.endTime} onChange={handleChange} className={inputClasses} />
               </div>
             </div>
-            {isTimedEvent && (
-                <div className="pt-4 border-t border-theme-input-border/50">
-                    <label htmlFor="reminderMinutes" className="block text-sm font-medium text-theme-text-secondary">Reminder</label>
-                    <select id="reminderMinutes" name="reminderMinutes" value={formData.reminderMinutes} onChange={handleReminderChange} className={`${inputClasses} custom-select mt-1`}>
-                        <option value="">No reminder</option>
-                        <option value="0">At time of event</option>
-                        <option value="5">5 minutes before</option>
-                        <option value="15">15 minutes before</option>
-                        <option value="30">30 minutes before</option>
-                        <option value="60">1 hour before</option>
-                        <option value="1440">1 day before</option>
-                    </select>
-                </div>
-            )}
             <div className="pt-4 border-t border-theme-input-border/50">
                <div className="flex items-center">
                     <input
@@ -293,9 +261,22 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
           
           {error && <p className="text-sm text-red-400 mt-2 animate-fade-in">{error}</p>}
 
-          <div className="flex justify-end gap-4 pt-4">
-            <button type="button" onClick={onClose} className="font-semibold py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg">Cancel</button>
-            <button type="submit" className="font-semibold py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-primary-bg text-theme-btn-primary-text hover:bg-theme-btn-primary-hover-bg">{isEditing ? 'Save Changes' : 'Create Task'}</button>
+          <div className="flex justify-between items-center gap-4 pt-4">
+            <div>
+              {isEditing && onDelete && task && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(task.id)}
+                  className="font-semibold py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-danger-bg text-theme-btn-danger-text hover:bg-theme-btn-danger-hover-bg"
+                >
+                  Delete Task
+                </button>
+              )}
+            </div>
+            <div className="flex gap-4">
+                <button type="button" onClick={onClose} className="font-semibold py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg">Cancel</button>
+                <button type="submit" className="font-semibold py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-primary-bg text-theme-btn-primary-text hover:bg-theme-btn-primary-hover-bg">{isEditing ? 'Save Changes' : 'Create Task'}</button>
+            </div>
           </div>
         </form>
       </GlassCard>
