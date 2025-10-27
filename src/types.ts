@@ -23,7 +23,8 @@ export interface Recurring {
   frequency: RecurrenceFrequency;
   interval: number;
   endDate?: string; // YYYY-MM-DD
-  daysOfWeek?: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  // FIX: Add optional daysOfWeek property to support weekly recurrences on specific days.
+  daysOfWeek?: number[]; // 0=Sunday, 1=Monday, ..., 6=Saturday
 }
 
 export interface Subtask {
@@ -46,6 +47,7 @@ export interface Task {
   subtasks?: Subtask[];
   recurring?: Recurring;
   originalId?: string; // Used for projected recurring instances
+  reminderMinutes?: number;
 }
 
 export type NewTaskPayload = Omit<Task, 'id' | 'completed' | 'timeSpent' | 'completionDate' | 'originalId'>;

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Task, TaskPriority, TaskCategory, NewTaskPayload, Subtask, Recurring, RecurrenceFrequency } from '../types';
 import GlassCard from './GlassCard';
+import { requestNotificationPermission } from '../utils/notifications';
+
 
 interface TaskModalProps {
   task: Task | null;
@@ -8,14 +10,14 @@ interface TaskModalProps {
   onClose: () => void;
 }
 
-const WEEK_DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
 const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
     
   const toLocalDateString = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0];
   const isAllDayEvent = (isoString: string | undefined) => !isoString || isoString.endsWith('T00:00:00.000Z');
   
   const [isRecurring, setIsRecurring] = useState(() => !!task?.recurring);
+  const permissionRequestedRef = useRef(false);
+
 
   const [formData, setFormData] = useState(() => {
     const start = task?.startTime ? new Date(task.startTime) : new Date();
@@ -34,7 +36,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
       frequency: task?.recurring?.frequency || RecurrenceFrequency.DAILY,
       interval: task?.recurring?.interval || 1,
       recurringEndDate: task?.recurring?.endDate || '',
-      daysOfWeek: task?.recurring?.daysOfWeek || [],
+      reminderMinutes: task?.reminderMinutes === undefined ? '' : String(task.reminderMinutes),
     };
   });
   
@@ -43,16 +45,18 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setError(null);
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDayOfWeekToggle = (dayIndex: number) => {
-    setFormData(prev => {
-        const newDays = prev.daysOfWeek.includes(dayIndex)
-            ? prev.daysOfWeek.filter(d => d !== dayIndex)
-            : [...prev.daysOfWeek, dayIndex];
-        return { ...prev, daysOfWeek: newDays.sort() };
-    });
+  const handleReminderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { value } = e.target;
+    setFormData(prev => ({ ...prev, reminderMinutes: value }));
+
+    if (value && !permissionRequestedRef.current) {
+        await requestNotificationPermission();
+        permissionRequestedRef.current = true;
+    }
   };
 
   const handleRecurringToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,12 +102,15 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
 
     const startTimeWithTimezone = formData.startTime 
         ? `${formData.startDate}T${formData.startTime}:00`
-        : `${formData.startDate}T00:00:00`;
+        : formData.startDate;
     const startDateTime = new Date(startTimeWithTimezone);
 
     let finalEndTime: string | undefined = undefined;
     
+    // An end time can be provided for both recurring and non-recurring tasks.
     if (formData.endTime) {
+        // For recurring tasks, the end time is on the same day as the start time.
+        // For non-recurring, it can be on a different day (formData.endDate).
         const datePartForEndTime = isRecurring ? formData.startDate : (formData.endDate || formData.startDate);
         const endTimeWithTimezone = `${datePartForEndTime}T${formData.endTime}:00`;
         const endDateTime = new Date(endTimeWithTimezone);
@@ -114,8 +121,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
         }
         finalEndTime = endDateTime.toISOString();
     } 
+    // Handle case for multi-day, non-recurring, all-day events
     else if (!isRecurring && formData.endDate) {
-        const endDateTime = new Date(`${formData.endDate}T00:00:00`);
+        const endDateTime = new Date(formData.endDate);
         if (endDateTime <= startDateTime) {
             setError("End date must be after the start date.");
             return;
@@ -131,23 +139,14 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
             setError("Repeat interval must be a positive number.");
             return;
         }
-
-        let daysOfWeek: number[] | undefined = undefined;
-        if (formData.frequency === RecurrenceFrequency.WEEKLY) {
-            if (formData.daysOfWeek.length > 0) {
-                daysOfWeek = formData.daysOfWeek;
-            } else {
-                daysOfWeek = [startDateTime.getDay()];
-            }
-        }
-
         recurring = {
             frequency: formData.frequency as RecurrenceFrequency,
             interval,
             endDate: formData.recurringEndDate || undefined,
-            daysOfWeek,
         };
     }
+    
+    const reminderMinutes = formData.reminderMinutes !== '' ? Number(formData.reminderMinutes) : undefined;
 
     const payload: NewTaskPayload = {
         title: formData.title,
@@ -158,6 +157,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
         priority: formData.priority,
         subtasks: formData.subtasks.filter(st => st.text.trim() !== ''),
         recurring,
+        reminderMinutes,
     };
 
     if (task) {
@@ -165,11 +165,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
     } else {
       onSave(payload);
     }
+    onClose();
   };
 
   const inputClasses = "block w-full bg-theme-input-bg border-theme-input-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-theme-input-focus focus:border-theme-input-focus transition";
-  const buttonClasses = "font-semibold rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border";
   const isEditing = !!task;
+  const isTimedEvent = formData.startTime !== '';
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
@@ -199,7 +200,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
                     </div>
                 ))}
             </div>
-            <button type="button" onClick={handleAddSubtask} className={`text-sm mt-2 py-1 px-3 ${buttonClasses} bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg`}>
+            <button type="button" onClick={handleAddSubtask} className="text-sm mt-2 font-semibold py-1 px-3 rounded-md transition-colors backdrop-blur-sm border border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg">
                 + Add Subtask
             </button>
           </div>
@@ -224,6 +225,20 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
                 <input type="time" id="endTime" name="endTime" value={formData.endTime} onChange={handleChange} className={inputClasses} />
               </div>
             </div>
+            {isTimedEvent && (
+                <div className="pt-4 border-t border-theme-input-border/50">
+                    <label htmlFor="reminderMinutes" className="block text-sm font-medium text-theme-text-secondary">Reminder</label>
+                    <select id="reminderMinutes" name="reminderMinutes" value={formData.reminderMinutes} onChange={handleReminderChange} className={`${inputClasses} custom-select mt-1`}>
+                        <option value="">No reminder</option>
+                        <option value="0">At time of event</option>
+                        <option value="5">5 minutes before</option>
+                        <option value="15">15 minutes before</option>
+                        <option value="30">30 minutes before</option>
+                        <option value="60">1 hour before</option>
+                        <option value="1440">1 day before</option>
+                    </select>
+                </div>
+            )}
             <div className="pt-4 border-t border-theme-input-border/50">
                <div className="flex items-center">
                     <input
@@ -238,47 +253,24 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
                     </label>
                 </div>
                 {isRecurring && (
-                    <div className="mt-4 pl-6 animate-fade-in space-y-4">
-                        <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-                            <div className="col-span-3 sm:col-span-1">
-                                <label htmlFor="frequency" className="block text-sm font-medium text-theme-text-secondary">Frequency</label>
-                                <select id="frequency" name="frequency" value={formData.frequency} onChange={handleChange} className={`${inputClasses} custom-select`}>
-                                    <option value={RecurrenceFrequency.DAILY}>Daily</option>
-                                    <option value={RecurrenceFrequency.WEEKLY}>Weekly</option>
-                                    <option value={RecurrenceFrequency.MONTHLY}>Monthly</option>
-                                    <option value={RecurrenceFrequency.YEARLY}>Yearly</option>
-                                </select>
-                            </div>
-                            <div className="col-span-3 sm:col-span-1">
-                                <label htmlFor="interval" className="block text-sm font-medium text-theme-text-secondary">Every</label>
-                                <input type="number" id="interval" name="interval" value={formData.interval} onChange={handleChange} min="1" className={inputClasses} />
-                            </div>
-                            <div className="col-span-3 sm:col-span-1">
-                                <label htmlFor="recurringEndDate" className="block text-sm font-medium text-theme-text-secondary">Until <span className="text-xs">(optional)</span></label>
-                                <input type="date" id="recurringEndDate" name="recurringEndDate" value={formData.recurringEndDate} onChange={handleChange} className={inputClasses} min={formData.startDate} />
-                            </div>
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-2 mt-4 pl-6 animate-fade-in">
+                        <div className="col-span-3 sm:col-span-1">
+                            <label htmlFor="frequency" className="block text-sm font-medium text-theme-text-secondary">Frequency</label>
+                            <select id="frequency" name="frequency" value={formData.frequency} onChange={handleChange} className={`${inputClasses} custom-select`}>
+                                <option value={RecurrenceFrequency.DAILY}>Daily</option>
+                                <option value={RecurrenceFrequency.WEEKLY}>Weekly</option>
+                                <option value={RecurrenceFrequency.MONTHLY}>Monthly</option>
+                                <option value={RecurrenceFrequency.YEARLY}>Yearly</option>
+                            </select>
                         </div>
-                        {formData.frequency === RecurrenceFrequency.WEEKLY && (
-                            <div className="animate-fade-in">
-                                <label className="block text-sm font-medium text-theme-text-secondary mb-2">On these days</label>
-                                <div className="flex justify-between gap-1">
-                                    {WEEK_DAYS.map((day, index) => (
-                                        <button
-                                            type="button"
-                                            key={index}
-                                            onClick={() => handleDayOfWeekToggle(index)}
-                                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full text-sm font-semibold transition-all duration-200 ${
-                                                formData.daysOfWeek.includes(index)
-                                                ? 'bg-theme-brand-primary text-white shadow-md'
-                                                : 'bg-theme-input-bg text-theme-text-secondary hover:bg-theme-nav-hover-bg'
-                                            }`}
-                                        >
-                                            {day}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        <div className="col-span-3 sm:col-span-1">
+                            <label htmlFor="interval" className="block text-sm font-medium text-theme-text-secondary">Every</label>
+                            <input type="number" id="interval" name="interval" value={formData.interval} onChange={handleChange} min="1" className={inputClasses} />
+                        </div>
+                        <div className="col-span-3 sm:col-span-1">
+                            <label htmlFor="recurringEndDate" className="block text-sm font-medium text-theme-text-secondary">Until <span className="text-xs">(optional)</span></label>
+                            <input type="date" id="recurringEndDate" name="recurringEndDate" value={formData.recurringEndDate} onChange={handleChange} className={inputClasses} min={formData.startDate} />
+                        </div>
                     </div>
                 )}
             </div>
@@ -302,8 +294,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, onSave, onClose }) => {
           {error && <p className="text-sm text-red-400 mt-2 animate-fade-in">{error}</p>}
 
           <div className="flex justify-end gap-4 pt-4">
-            <button type="button" onClick={onClose} className={`${buttonClasses} py-2 px-4 bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg`}>Cancel</button>
-            <button type="submit" className={`${buttonClasses} py-2 px-4 bg-theme-btn-primary-bg text-theme-btn-primary-text hover:bg-theme-btn-primary-hover-bg`}>{isEditing ? 'Save Changes' : 'Create Task'}</button>
+            <button type="button" onClick={onClose} className="font-semibold py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-default-bg text-theme-btn-default-text hover:bg-theme-btn-default-hover-bg">Cancel</button>
+            <button type="submit" className="font-semibold py-2 px-4 rounded-lg transition-all duration-200 backdrop-blur-sm border shadow-md active:shadow-inner active:scale-95 border-theme-btn-border bg-theme-btn-primary-bg text-theme-btn-primary-text hover:bg-theme-btn-primary-hover-bg">{isEditing ? 'Save Changes' : 'Create Task'}</button>
           </div>
         </form>
       </GlassCard>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MainContent from './components/MainContent';
 import FocusPage from './components/FocusPage';
@@ -12,6 +12,7 @@ import { Task, NewTaskPayload } from './types';
 import TaskModal from './components/TaskModal';
 import AISchedulerModal from './components/AISchedulerModal';
 import FloatingActionButton from './components/FloatingActionButton';
+import { updateAllReminders } from './utils/reminderManager';
 
 function AppContent() {
   const tasksHook = useTasks();
@@ -21,6 +22,10 @@ function AppContent() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const [isAISchedulerOpen, setIsAISchedulerOpen] = useState(false);
+
+  useEffect(() => {
+    updateAllReminders(tasksHook.tasks);
+  }, [tasksHook.tasks]);
 
   const handleOpenAddTaskModal = () => {
     setEditingTask(null);
@@ -38,7 +43,7 @@ function AppContent() {
     setEditingTask(null);
   };
 
- const handleSaveTask = (taskData: Task | NewTaskPayload) => {
+  const handleSaveTask = (taskData: Task | NewTaskPayload) => {
     if ('id' in taskData && taskData.id) {
         tasksHook.updateTask(taskData as Task);
     } else {
@@ -46,6 +51,7 @@ function AppContent() {
     }
     handleCloseModal();
   };
+
 
   const handleOpenAIScheduler = () => {
     setIsAISchedulerOpen(true);
@@ -71,6 +77,7 @@ function AppContent() {
       case 'Reports':
         return <ReportsPage tasks={tasksHook.tasks} />;
       case 'Settings':
+        // FIX: Pass the required 'tasks' and 'addTasks' props to the SettingsPage component.
         return <SettingsPage tasks={tasksHook.tasks} addTasks={tasksHook.addTasks} />; 
       default:
         return <MainContent {...tasksHook} onEditTask={handleOpenEditTaskModal} />;
@@ -82,7 +89,7 @@ function AppContent() {
       {isModalOpen && (
         <TaskModal 
           task={editingTask}
-          onSave={handleSaveTask} 
+          onSave={editingTask ? tasksHook.updateTask : tasksHook.addTask} 
           onClose={handleCloseModal} 
         />
       )}
